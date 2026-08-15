@@ -37,6 +37,13 @@ test("add, rename, and renumber workspaces", () => {
   assert.strictEqual(Model.findWorkspace(cfg, comm.id).workspace, 8)
 })
 
+test("stock workspace widget can be hidden and restored", () => {
+  let cfg = Model.setShowStockWorkspaces(Model.defaultConfig(), true)
+  assert.strictEqual(cfg.showStockWorkspaces, true)
+  assert.match(Model.hideStockWorkspacesCommand(), /omarchy plugin disable omarchy.workspaces/)
+  assert.match(Model.showStockWorkspacesCommand(), /--before io.github.jethrojones.tile-manager/)
+})
+
 test("workspace numbers clamp to 1-10", () => {
   assert.strictEqual(Model.clampWorkspace(0), 1)
   assert.strictEqual(Model.clampWorkspace(99), 10)

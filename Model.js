@@ -11,6 +11,7 @@ function defaultConfig() {
     version: CONFIG_VERSION,
     followOnLaunch: true,
     pinWindows: false,
+    showStockWorkspaces: false,
     workspaces: [
       emptyWorkspace("ws-1", "1", 1),
       emptyWorkspace("ws-2", "2", 2),
@@ -86,6 +87,7 @@ function normalizeConfig(raw) {
       version: CONFIG_VERSION,
       followOnLaunch: source.followOnLaunch !== false,
       pinWindows: source.pinWindows === true,
+      showStockWorkspaces: source.showStockWorkspaces === true,
       workspaces: workspaces
     }
   }
@@ -243,8 +245,22 @@ function setFollowOnLaunch(config, enabled) {
 
 function setPinWindows(config, enabled) {
   var next = clone(config)
-  next.pinWindows = enabled !== false
+  next.pinWindows = enabled === true
   return next
+}
+
+function setShowStockWorkspaces(config, enabled) {
+  var next = clone(config)
+  next.showStockWorkspaces = enabled === true
+  return next
+}
+
+function hideStockWorkspacesCommand() {
+  return "omarchy plugin disable omarchy.workspaces"
+}
+
+function showStockWorkspacesCommand() {
+  return "omarchy plugin enable omarchy.workspaces --section left --before " + PLUGIN_ID
 }
 
 function findWorkspaceByNumber(config, number) {
@@ -562,6 +578,9 @@ if (typeof module !== "undefined" && module.exports) {
     removeApp: removeApp,
     setFollowOnLaunch: setFollowOnLaunch,
     setPinWindows: setPinWindows,
+    setShowStockWorkspaces: setShowStockWorkspaces,
+    hideStockWorkspacesCommand: hideStockWorkspacesCommand,
+    showStockWorkspacesCommand: showStockWorkspacesCommand,
     findWorkspace: findWorkspace,
     findWorkspaceByNumber: findWorkspaceByNumber,
     ensureWorkspaceNumber: ensureWorkspaceNumber,

@@ -42,6 +42,7 @@ Item {
     root.ready = true
     if (created) persist(root.config)
     else syncRules()
+    applyStockWorkspaces(root.config.showStockWorkspaces === true)
   }
 
   function persist(next) {
@@ -92,6 +93,15 @@ Item {
 
   function setPinWindows(enabled) {
     persist(Model.setPinWindows(root.config, enabled))
+  }
+
+  function setShowStockWorkspaces(enabled) {
+    persist(Model.setShowStockWorkspaces(root.config, enabled))
+    applyStockWorkspaces(enabled === true)
+  }
+
+  function applyStockWorkspaces(show) {
+    run(show ? Model.showStockWorkspacesCommand() : Model.hideStockWorkspacesCommand())
   }
 
   function importOpenWindows() {

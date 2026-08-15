@@ -16,11 +16,10 @@ For a local checkout:
 omarchy plugin add /home/jethro/projects/tile-manager --enable
 ```
 
-Place it next to the existing workspace numbers, or replace them:
+While Tile Manager is enabled it hides Omarchy's numbered `1–0` widget. Turn that widget back on from the cog panel, or after removal:
 
 ```sh
-omarchy bar move io.github.jethrojones.tile-manager --section left
-omarchy plugin disable omarchy.workspaces
+omarchy plugin enable omarchy.workspaces --section left --before io.github.jethrojones.tile-manager
 ```
 
 ## Usage
@@ -50,10 +49,10 @@ Optional cleanup:
 rm -f ~/.config/omarchy/tile-manager.json ~/.local/state/omarchy/toggles/hypr/tile-manager.lua
 ```
 
-Restore the numbered workspace widget if you disabled it:
+Restore the numbered workspace widget if it does not come back on its own:
 
 ```sh
-omarchy plugin enable omarchy.workspaces
+omarchy plugin enable omarchy.workspaces --section left
 ```
 
 ## Develop

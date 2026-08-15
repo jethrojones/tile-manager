@@ -153,6 +153,16 @@ Panel {
 
           Toggle {
             width: parent.width
+            label: "Stock workspace numbers"
+            description: "Show Omarchy's 1–0 widget next to Tile Manager"
+            checked: service ? service.config.showStockWorkspaces === true : false
+            foreground: root.contentForeground
+            fontFamily: root.contentFontFamily
+            onClicked: if (service) service.setShowStockWorkspaces(!(service.config.showStockWorkspaces === true))
+          }
+
+          Toggle {
+            width: parent.width
             label: "Follow launches"
             description: "Switch to the app's workspace when it opens"
             checked: service ? service.config.followOnLaunch !== false : true
@@ -233,7 +243,7 @@ Panel {
                   tooltipText: "Go to workspace"
                   foreground: root.contentForeground
                   fontFamily: root.contentFontFamily
-                  onClicked: if (service) service.focusWorkspace(modelData.workspace)
+                  onClicked: goToWorkspace(modelData.workspace)
                 }
 
                 PanelActionButton {
@@ -241,7 +251,7 @@ Panel {
                   tooltipText: "Launch assigned apps"
                   foreground: root.contentForeground
                   fontFamily: root.contentFontFamily
-                  onClicked: if (service) service.launchWorkspace(modelData.id)
+                  onClicked: launchSelectedWorkspace(modelData.id)
                 }
 
                 PanelActionButton {
@@ -250,11 +260,7 @@ Panel {
                   foreground: root.contentForeground
                   hoverColor: root.bar ? root.bar.urgent : Color.urgent
                   fontFamily: root.contentFontFamily
-                  onClicked: {
-                    if (!service) return
-                    service.removeWorkspace(modelData.id)
-                    if (root.selectedId === modelData.id) root.selectedId = root.defaultSelectedId()
-                  }
+                  onClicked: deleteWorkspace(modelData.id)
                 }
               }
 
