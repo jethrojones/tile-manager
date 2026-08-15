@@ -43,7 +43,8 @@ omarchy plugin add ~/projects/tile-manager --enable
 - Right-click a name, or click the cog, to rename spaces and assign apps.
 - **Assign focused window** pins the window you are on.
 - **Assign open windows** parks each unique app on the workspace it is already using. Apps that roam, like terminals, are skipped.
-- **Hide numbered workspaces** is optional and off by default. Turn it on if you want Omarchy's `1–0` widget removed while Tile Manager is in the bar.
+- **Hide 1–0 workspace widget** is in Settings at the top of the cog panel, and is off by default.
+- **Launch assigned apps at login** starts any assigned app that is not already running. Use **Launch assigned apps now** to do the same without logging out.
 - Press Escape to close the panel.
 
 Assigned apps open on their workspace through generated Hyprland window rules. **Follow launches** (on by default) also switches you there. If the app is already running, `omarchy-launch-or-focus` jumps to it.

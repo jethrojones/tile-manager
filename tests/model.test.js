@@ -160,6 +160,14 @@ test("parseActiveWindow and parseClients", () => {
   assert.strictEqual(Model.workspaceOccupied(clients, 4), false)
 })
 
+test("autolaunch skips apps that are already running", () => {
+  const app = { name: "Telegram", class: "org.telegram.desktop", desktopId: "" }
+  const running = [{ class: "org.telegram.desktop", initialClass: "org.telegram.desktop" }]
+  assert.strictEqual(Model.startIfMissingCommand(app, running), "")
+  assert.match(Model.startIfMissingCommand(app, []), /uwsm-app/)
+  assert.ok(!String(Model.startIfMissingCommand(app, [])).includes("omarchy-launch-or-focus"))
+})
+
 test("launch and focus commands stay quoted", () => {
   const focus = Model.focusCommand(3)
   assert.match(focus, /hyprctl dispatch/)

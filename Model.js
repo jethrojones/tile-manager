@@ -12,6 +12,7 @@ function defaultConfig() {
     followOnLaunch: true,
     pinWindows: false,
     hideStockWorkspaces: false,
+    autolaunchAtLogin: false,
     workspaces: [
       emptyWorkspace("ws-1", "1", 1),
       emptyWorkspace("ws-2", "2", 2),
@@ -90,6 +91,7 @@ function normalizeConfig(raw) {
       followOnLaunch: source.followOnLaunch !== false,
       pinWindows: source.pinWindows === true,
       hideStockWorkspaces: source.hideStockWorkspaces === true,
+      autolaunchAtLogin: source.autolaunchAtLogin === true,
       workspaces: workspaces
     }
   }
@@ -312,6 +314,12 @@ function setPinWindows(config, enabled) {
 function setHideStockWorkspaces(config, enabled) {
   var next = clone(config)
   next.hideStockWorkspaces = enabled === true
+  return next
+}
+
+function setAutolaunchAtLogin(config, enabled) {
+  var next = clone(config)
+  next.autolaunchAtLogin = enabled === true
   return next
 }
 
@@ -586,12 +594,34 @@ function windowFromOpenEvent(event) {
 
 function launchCommand(app) {
   var pattern = escapeRe2(app.class || app.desktopId || app.name || "")
-  var launch = ""
-  if (app.desktopId) launch = "uwsm-app -- gtk-launch " + shellQuote(app.desktopId + ".desktop")
-  else if (app.class) launch = "uwsm-app -- " + shellQuote(app.class)
-  else return ""
-  if (!pattern) return launch
+  var launch = startCommand(app)
+  if (!pattern || !launch) return launch
   return "omarchy-launch-or-focus " + shellQuote(pattern) + " " + shellQuote(launch)
+}
+
+function startCommand(app) {
+  if (!app) return ""
+  if (app.desktopId) return "uwsm-app -- gtk-launch " + shellQuote(app.desktopId + ".desktop")
+  if (app.class) return "uwsm-app -- " + shellQuote(app.class)
+  return ""
+}
+
+function appIsRunning(app, clients) {
+  if (!app) return false
+  var klass = String(app.class || "").toLowerCase()
+  var desktop = String(app.desktopId || "").toLowerCase()
+  var list = clients || []
+  for (var i = 0; i < list.length; i++) {
+    var running = String(list[i].class || list[i].initialClass || "").toLowerCase()
+    if (klass && running === klass) return true
+    if (desktop && running === desktop) return true
+  }
+  return false
+}
+
+function startIfMissingCommand(app, clients) {
+  if (appIsRunning(app, clients)) return ""
+  return startCommand(app)
 }
 
 function shellQuote(value) {
@@ -651,6 +681,7 @@ if (typeof module !== "undefined" && module.exports) {
     setFollowOnLaunch: setFollowOnLaunch,
     setPinWindows: setPinWindows,
     setHideStockWorkspaces: setHideStockWorkspaces,
+    setAutolaunchAtLogin: setAutolaunchAtLogin,
     mergeLiveWorkspaces: mergeLiveWorkspaces,
     liveWorkspaceIds: liveWorkspaceIds,
     hideStockWorkspacesCommand: hideStockWorkspacesCommand,
@@ -674,6 +705,9 @@ if (typeof module !== "undefined" && module.exports) {
     moveCommand: moveCommand,
     windowFromOpenEvent: windowFromOpenEvent,
     launchCommand: launchCommand,
+    startCommand: startCommand,
+    startIfMissingCommand: startIfMissingCommand,
+    appIsRunning: appIsRunning,
     desktopOptions: desktopOptions,
     workspaceIdsKey: workspaceIdsKey,
     rawWorkspaceIdsKey: rawWorkspaceIdsKey,

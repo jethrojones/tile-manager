@@ -24,8 +24,12 @@ Item {
   readonly property string configPath: home + "/.config/omarchy/tile-manager.json"
   readonly property string rulesDir: stateHome + "/omarchy/toggles/hypr"
   readonly property string rulesPath: rulesDir + "/tile-manager.lua"
+  readonly property string autolaunchPath: stateHome + "/omarchy/tile-manager.autolaunch"
   property string pendingRules: ""
   property string pendingAssignWorkspaceId: ""
+  property bool autolaunchChecked: false
+  property string currentBootId: ""
+  property string lastAutolaunchBootId: ""
 
   readonly property var workspaces: config && config.workspaces ? config.workspaces : []
   readonly property int focusedWorkspaceId: Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : 0
@@ -102,6 +106,10 @@ Item {
     applyStockWorkspaces(enabled !== true)
   }
 
+  function setAutolaunchAtLogin(enabled) {
+    persist(Model.setAutolaunchAtLogin(root.config, enabled))
+  }
+
   function applyStockWorkspaces(show) {
     run(show ? Model.showStockWorkspacesCommand() : Model.hideStockWorkspacesCommand())
   }
@@ -130,6 +138,31 @@ Item {
   function launchApp(app) {
     var command = Model.launchCommand(app)
     if (command) run(command)
+  }
+
+  function launchMissingAssignedApps() {
+    var workspaces = root.config && root.config.workspaces ? root.config.workspaces : []
+    for (var i = 0; i < workspaces.length; i++) {
+      var apps = workspaces[i].apps || []
+      for (var j = 0; j < apps.length; j++) {
+        var command = Model.startIfMissingCommand(apps[j], root.clients)
+        if (command) run(command)
+      }
+    }
+  }
+
+  function maybeAutolaunch() {
+    if (root.autolaunchChecked) return
+    if (!root.ready || !root.config || root.config.autolaunchAtLogin !== true) return
+    if (!root.currentBootId) return
+    if (root.lastAutolaunchBootId === root.currentBootId) {
+      root.autolaunchChecked = true
+      return
+    }
+    launchMissingAssignedApps()
+    autolaunchFile.setText(root.currentBootId + "\n")
+    root.lastAutolaunchBootId = root.currentBootId
+    root.autolaunchChecked = true
   }
 
   function launchWorkspace(workspaceId) {
@@ -244,6 +277,27 @@ Item {
   }
 
   FileView {
+    id: autolaunchFile
+    path: root.autolaunchPath
+    watchChanges: false
+    atomicWrites: true
+    printErrors: false
+    onLoaded: root.lastAutolaunchBootId = String(text() || "").trim()
+    onLoadFailed: root.lastAutolaunchBootId = ""
+  }
+
+  Process {
+    id: bootIdProcess
+    running: true
+    command: ["cat", "/proc/sys/kernel/random/boot_id"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.currentBootId = String(text || "").trim()
+    }
+    onExited: root.maybeAutolaunch()
+  }
+
+  FileView {
     id: rulesFile
     path: root.rulesPath
     watchChanges: false
@@ -272,6 +326,7 @@ Item {
     onExited: {
       root.finishAssignActiveWindow()
       root.syncLiveWorkspaces()
+      root.maybeAutolaunch()
     }
   }
 

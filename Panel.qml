@@ -151,14 +151,31 @@ Panel {
             wrapMode: Text.WordWrap
           }
 
+          PanelSectionHeader {
+            width: parent.width
+            text: "Settings"
+            foreground: root.contentForeground
+            fontFamily: root.contentFontFamily
+          }
+
           Toggle {
             width: parent.width
-            label: "Hide numbered workspaces"
-            description: "Turn off Omarchy's 1–0 widget. Off by default so your bar is unchanged until you choose."
+            label: "Hide 1–0 workspace widget"
+            description: "Remove Omarchy's numbered 1–0 bar widget"
             checked: service ? service.config.hideStockWorkspaces === true : false
             foreground: root.contentForeground
             fontFamily: root.contentFontFamily
             onClicked: if (service) service.setHideStockWorkspaces(!(service.config.hideStockWorkspaces === true))
+          }
+
+          Toggle {
+            width: parent.width
+            label: "Launch assigned apps at login"
+            description: "Start missing assigned apps when you log in. Already-open apps are left alone."
+            checked: service ? service.config.autolaunchAtLogin === true : false
+            foreground: root.contentForeground
+            fontFamily: root.contentFontFamily
+            onClicked: if (service) service.setAutolaunchAtLogin(!(service.config.autolaunchAtLogin === true))
           }
 
           Toggle {
@@ -179,6 +196,14 @@ Panel {
             foreground: root.contentForeground
             fontFamily: root.contentFontFamily
             onClicked: if (service) service.setPinWindows(!(service.config.pinWindows !== false))
+          }
+
+          Button {
+            width: parent.width
+            text: "Launch assigned apps now"
+            foreground: root.contentForeground
+            fontFamily: root.contentFontFamily
+            onClicked: if (service) service.launchMissingAssignedApps()
           }
 
           PanelSeparator { width: parent.width; foreground: root.contentForeground }
