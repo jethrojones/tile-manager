@@ -87,16 +87,6 @@ Panel {
     if (selectedId === workspaceId) selectWorkspace(defaultSelectedId())
   }
 
-  function moveWorkspace(workspaceId, delta) {
-    if (service) service.moveWorkspace(workspaceId, delta)
-  }
-
-  function finishDrag(workspaceId, offsetY, rowHeight) {
-    var step = Math.max(Style.space(28), rowHeight || 1)
-    var delta = Math.round(offsetY / step)
-    if (delta) moveWorkspace(workspaceId, delta)
-  }
-
   function addNamedWorkspace() {
     if (!service) return
     var before = workspaces.map(function(ws) { return ws.id })
@@ -119,7 +109,7 @@ Panel {
     bar: root.bar
     open: root.opened
     focusTarget: keyCatcher
-    contentWidth: panel.fittedContentWidth(Style.space(420))
+    contentWidth: panel.fittedContentWidth(Style.space(360))
     contentHeight: panel.fittedContentHeight(content.implicitHeight, Style.space(560))
 
     PanelKeyCatcher {
@@ -193,64 +183,58 @@ Panel {
 
           PanelSeparator { width: parent.width; foreground: root.contentForeground }
 
-          RowLayout {
+          PanelSectionHeader {
             width: parent.width
-
-            PanelSectionHeader {
-              Layout.fillWidth: true
-              text: "Workspaces"
-              foreground: root.contentForeground
-              fontFamily: root.contentFontFamily
-            }
-
-            Text {
-              visible: service && service.config.sortMode === "manual"
-              text: "Sorted by you"
-              color: root.dim
-              font.family: root.contentFontFamily
-              font.pixelSize: Style.font.caption
-            }
-
-            PanelActionButton {
-              visible: service && service.config.sortMode === "manual"
-              iconText: "󰁞"
-              tooltipText: "Sort by workspace number"
-              foreground: root.contentForeground
-              fontFamily: root.contentFontFamily
-              onClicked: if (service) service.sortWorkspacesByNumber()
-            }
+            text: "Workspaces"
+            foreground: root.contentForeground
+            fontFamily: root.contentFontFamily
           }
 
           Repeater {
             model: root.workspaces
-            delegate: workspaceRowDelegate
-          }
 
-          Component {
-            id: workspaceRowDelegate
-
-            WorkspaceRow {
+            RowLayout {
               width: content.width
-              workspace: modelData
-              selected: modelData && modelData.id === root.selectedId
-              foreground: root.contentForeground
-              dim: root.dim
-              fontFamily: root.contentFontFamily
-              bar: root.bar
-              onSelectRequested: root.selectWorkspace(workspace.id)
-              onMoveRequested: function(delta) { root.moveWorkspace(workspace.id, delta) }
-              onDragStarted: scroller.interactive = false
-              onDragFinished: function(offsetY, rowHeight) {
-                scroller.interactive = true
-                root.finishDrag(workspace.id, offsetY, rowHeight)
+              spacing: Style.space(6)
+
+              Text {
+                Layout.fillWidth: true
+                text: modelData.name
+                color: modelData.id === root.selectedId ? root.contentForeground : root.dim
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.body
+                font.bold: modelData.id === root.selectedId
+                elide: Text.ElideRight
+
+                MouseArea {
+                  anchors.fill: parent
+                  onClicked: root.selectWorkspace(modelData.id)
+                }
               }
-              onGoRequested: root.goToWorkspace(workspace.workspace)
-              onLaunchRequested: root.launchSelectedWorkspace(workspace.id)
-              onDeleteRequested: root.deleteWorkspace(workspace.id)
-              onNumberChanged: function(value) {
-                if (root.service) root.service.setWorkspaceNumber(workspace.id, value)
+
+              Text {
+                text: String(modelData.workspace)
+                color: root.dim
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.caption
               }
-              onNumberFocusChanged: function(on) { root.editingNumber = on }
+
+              PanelActionButton {
+                iconText: "→"
+                tooltipText: "Go to workspace"
+                foreground: root.contentForeground
+                fontFamily: root.contentFontFamily
+                onClicked: root.goToWorkspace(modelData.workspace)
+              }
+
+              PanelActionButton {
+                iconText: "×"
+                tooltipText: "Remove workspace"
+                foreground: root.contentForeground
+                hoverColor: root.bar ? root.bar.urgent : Color.urgent
+                fontFamily: root.contentFontFamily
+                onClicked: root.deleteWorkspace(modelData.id)
+              }
             }
           }
 

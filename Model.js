@@ -12,7 +12,6 @@ function defaultConfig() {
     followOnLaunch: true,
     pinWindows: false,
     showStockWorkspaces: false,
-    sortMode: "workspace",
     workspaces: [
       emptyWorkspace("ws-1", "1", 1),
       emptyWorkspace("ws-2", "2", 2),
@@ -82,8 +81,7 @@ function normalizeConfig(raw) {
 
   if (workspaces.length === 0) workspaces = defaultConfig().workspaces
 
-  var sortMode = source.sortMode === "manual" ? "manual" : "workspace"
-  if (sortMode !== "manual") workspaces = sortByNumber(workspaces)
+  workspaces = sortByNumber(workspaces)
 
   return {
     ok: true,
@@ -92,7 +90,6 @@ function normalizeConfig(raw) {
       followOnLaunch: source.followOnLaunch !== false,
       pinWindows: source.pinWindows === true,
       showStockWorkspaces: source.showStockWorkspaces === true,
-      sortMode: sortMode,
       workspaces: workspaces
     }
   }
@@ -157,8 +154,7 @@ function addWorkspace(config, name, workspace) {
   var used = idsInUse(next.workspaces)
   var label = String(name || "").trim() || String(number)
   var ws = emptyWorkspace(uniqueId(label, used), label.slice(0, 24), number)
-  if (next.sortMode === "manual") next.workspaces.push(ws)
-  else next.workspaces = insertByNumber(next.workspaces, ws)
+  next.workspaces = insertByNumber(next.workspaces, ws)
   return next
 }
 
@@ -180,33 +176,6 @@ function insertByNumber(workspaces, ws) {
   }
   if (!inserted) out.push(ws)
   return out
-}
-
-function sortWorkspacesByNumber(config) {
-  var next = clone(config)
-  next.sortMode = "workspace"
-  next.workspaces = sortByNumber(next.workspaces)
-  return next
-}
-
-function workspaceIndex(config, workspaceId) {
-  var workspaces = config && config.workspaces ? config.workspaces : []
-  for (var i = 0; i < workspaces.length; i++) {
-    if (workspaces[i].id === workspaceId) return i
-  }
-  return -1
-}
-
-function moveWorkspaceBy(config, workspaceId, delta) {
-  var next = clone(config)
-  var index = workspaceIndex(next, workspaceId)
-  var target = index + parseInt(String(delta), 10)
-  if (index < 0 || !isFinite(target) || target < 0 || target >= next.workspaces.length) return next
-  if (target === index) return next
-  var item = next.workspaces.splice(index, 1)[0]
-  next.workspaces.splice(target, 0, item)
-  next.sortMode = "manual"
-  return next
 }
 
 function liveWorkspaceIds(hyprlandIds, clients, focusedId) {
@@ -240,13 +209,9 @@ function mergeLiveWorkspaces(config, liveIds) {
     next.workspaces = insertByNumber(next.workspaces, emptyWorkspace(uniqueId("ws-" + number, used), String(number), number))
     added = true
   }
-  var sorted = false
-  if (next.sortMode !== "manual") {
-    var before = next.workspaces.map(function(ws) { return ws.id }).join(",")
-    next.workspaces = sortByNumber(next.workspaces)
-    next.sortMode = "workspace"
-    sorted = before !== next.workspaces.map(function(ws) { return ws.id }).join(",")
-  }
+  var before = next.workspaces.map(function(ws) { return ws.id }).join(",")
+  next.workspaces = sortByNumber(next.workspaces)
+  var sorted = before !== next.workspaces.map(function(ws) { return ws.id }).join(",")
   return { config: next, added: added, changed: added || sorted }
 }
 
@@ -686,8 +651,6 @@ if (typeof module !== "undefined" && module.exports) {
     setFollowOnLaunch: setFollowOnLaunch,
     setPinWindows: setPinWindows,
     setShowStockWorkspaces: setShowStockWorkspaces,
-    sortWorkspacesByNumber: sortWorkspacesByNumber,
-    moveWorkspaceBy: moveWorkspaceBy,
     mergeLiveWorkspaces: mergeLiveWorkspaces,
     liveWorkspaceIds: liveWorkspaceIds,
     hideStockWorkspacesCommand: hideStockWorkspacesCommand,

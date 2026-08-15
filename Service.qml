@@ -111,14 +111,6 @@ Item {
     persist(Model.importOpenWindows(root.config, root.clients))
   }
 
-  function moveWorkspace(workspaceId, delta) {
-    persist(Model.moveWorkspaceBy(root.config, workspaceId, delta))
-  }
-
-  function sortWorkspacesByNumber() {
-    persist(Model.sortWorkspacesByNumber(root.config))
-  }
-
   function liveWorkspaceIds() {
     var hyprlandIds = []
     var values = Hyprland.workspaces.values || []

@@ -59,19 +59,6 @@ test("live workspaces are created and sorted by number", () => {
   assert.strictEqual(merged.config.workspaces[1].name, "Comms (2)")
 })
 
-test("manual reorder is preserved until sorted again", () => {
-  let cfg = Model.defaultConfig()
-  const first = cfg.workspaces[0].id
-  const second = cfg.workspaces[1].id
-  cfg = Model.moveWorkspaceBy(cfg, second, -1)
-  assert.strictEqual(cfg.sortMode, "manual")
-  assert.strictEqual(cfg.workspaces[0].id, second)
-  assert.strictEqual(cfg.workspaces[1].id, first)
-  cfg = Model.sortWorkspacesByNumber(cfg)
-  assert.strictEqual(cfg.sortMode, "workspace")
-  assert.strictEqual(cfg.workspaces[0].id, first)
-})
-
 test("workspace numbers clamp to 1-10", () => {
   assert.strictEqual(Model.clampWorkspace(0), 1)
   assert.strictEqual(Model.clampWorkspace(99), 10)
