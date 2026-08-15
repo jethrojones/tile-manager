@@ -24,6 +24,8 @@ omarchy plugin enable omarchy.workspaces --section left --before io.github.jethr
 
 ## Usage
 
+- Used Hyprland workspaces appear in the bar automatically, in number order.
+- Drag a workspace in the panel, or use the up/down buttons, to choose your own order.
 - Click a workspace name in the bar to switch to it.
 - Middle-click a name to launch its assigned apps.
 - Right-click a name, or click the cog, to manage names and app assignments.

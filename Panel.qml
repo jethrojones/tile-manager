@@ -87,6 +87,16 @@ Panel {
     if (selectedId === workspaceId) selectWorkspace(defaultSelectedId())
   }
 
+  function moveWorkspace(workspaceId, delta) {
+    if (service) service.moveWorkspace(workspaceId, delta)
+  }
+
+  function finishDrag(workspaceId, offsetY, rowHeight) {
+    var step = Math.max(Style.space(28), rowHeight || 1)
+    var delta = Math.round(offsetY / step)
+    if (delta) moveWorkspace(workspaceId, delta)
+  }
+
   function addNamedWorkspace() {
     if (!service) return
     var before = workspaces.map(function(ws) { return ws.id })
@@ -183,17 +193,39 @@ Panel {
 
           PanelSeparator { width: parent.width; foreground: root.contentForeground }
 
-          PanelSectionHeader {
+          RowLayout {
             width: parent.width
-            text: "Workspaces"
-            foreground: root.contentForeground
-            fontFamily: root.contentFontFamily
+
+            PanelSectionHeader {
+              Layout.fillWidth: true
+              text: "Workspaces"
+              foreground: root.contentForeground
+              fontFamily: root.contentFontFamily
+            }
+
+            Text {
+              visible: service && service.config.sortMode === "manual"
+              text: "Sorted by you"
+              color: root.dim
+              font.family: root.contentFontFamily
+              font.pixelSize: Style.font.caption
+            }
+
+            PanelActionButton {
+              visible: service && service.config.sortMode === "manual"
+              iconText: "󰁞"
+              tooltipText: "Sort by workspace number"
+              foreground: root.contentForeground
+              fontFamily: root.contentFontFamily
+              onClicked: if (service) service.sortWorkspacesByNumber()
+            }
           }
 
           Repeater {
             model: root.workspaces
 
             Rectangle {
+              id: workspaceCard
               required property var modelData
               width: content.width
               height: workspaceRow.implicitHeight + Style.space(8)
@@ -201,15 +233,46 @@ Panel {
               color: modelData.id === root.selectedId
                 ? Style.hoverFillFor(root.contentForeground, Color.accent)
                 : "transparent"
+              z: gripArea.drag.active ? 2 : 0
 
               RowLayout {
                 id: workspaceRow
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                anchors.leftMargin: Style.space(6)
+                anchors.leftMargin: Style.space(4)
                 anchors.rightMargin: Style.space(4)
-                spacing: Style.space(6)
+                spacing: Style.space(4)
+
+                Item {
+                  Layout.preferredWidth: Style.space(22)
+                  Layout.preferredHeight: Style.space(28)
+
+                  Text {
+                    anchors.centerIn: parent
+                    text: "󰇈"
+                    color: root.dim
+                    font.family: root.contentFontFamily
+                    font.pixelSize: Style.font.icon
+                  }
+
+                  MouseArea {
+                    id: gripArea
+                    anchors.fill: parent
+                    cursorShape: Qt.SizeVerCursor
+                    drag.target: workspaceCard
+                    drag.axis: Drag.YAxis
+                    onPressed: {
+                      scroller.interactive = false
+                      root.selectWorkspace(workspaceCard.modelData.id)
+                    }
+                    onReleased: {
+                      scroller.interactive = true
+                      root.finishDrag(workspaceCard.modelData.id, workspaceCard.y, workspaceCard.height)
+                      workspaceCard.y = 0
+                    }
+                  }
+                }
 
                 WidgetButton {
                   bar: root.bar
@@ -237,6 +300,22 @@ Panel {
                 }
 
                 Item { Layout.fillWidth: true }
+
+                PanelActionButton {
+                  iconText: "󰁝"
+                  tooltipText: "Move up"
+                  foreground: root.contentForeground
+                  fontFamily: root.contentFontFamily
+                  onClicked: moveWorkspace(modelData.id, -1)
+                }
+
+                PanelActionButton {
+                  iconText: "󰁅"
+                  tooltipText: "Move down"
+                  foreground: root.contentForeground
+                  fontFamily: root.contentFontFamily
+                  onClicked: moveWorkspace(modelData.id, 1)
+                }
 
                 PanelActionButton {
                   iconText: "󰁔"

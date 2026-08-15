@@ -12,6 +12,7 @@ function defaultConfig() {
     followOnLaunch: true,
     pinWindows: false,
     showStockWorkspaces: false,
+    sortMode: "workspace",
     workspaces: [
       emptyWorkspace("ws-1", "1", 1),
       emptyWorkspace("ws-2", "2", 2),
@@ -81,6 +82,9 @@ function normalizeConfig(raw) {
 
   if (workspaces.length === 0) workspaces = defaultConfig().workspaces
 
+  var sortMode = source.sortMode === "manual" ? "manual" : "workspace"
+  if (sortMode !== "manual") workspaces = sortByNumber(workspaces)
+
   return {
     ok: true,
     config: {
@@ -88,6 +92,7 @@ function normalizeConfig(raw) {
       followOnLaunch: source.followOnLaunch !== false,
       pinWindows: source.pinWindows === true,
       showStockWorkspaces: source.showStockWorkspaces === true,
+      sortMode: sortMode,
       workspaces: workspaces
     }
   }
@@ -151,8 +156,98 @@ function addWorkspace(config, name, workspace) {
   if (!number) return next
   var used = idsInUse(next.workspaces)
   var label = String(name || "").trim() || String(number)
-  next.workspaces.push(emptyWorkspace(uniqueId(label, used), label.slice(0, 24), number))
+  var ws = emptyWorkspace(uniqueId(label, used), label.slice(0, 24), number)
+  if (next.sortMode === "manual") next.workspaces.push(ws)
+  else next.workspaces = insertByNumber(next.workspaces, ws)
   return next
+}
+
+function sortByNumber(workspaces) {
+  return (workspaces || []).slice().sort(function(left, right) {
+    return left.workspace - right.workspace
+  })
+}
+
+function insertByNumber(workspaces, ws) {
+  var out = []
+  var inserted = false
+  for (var i = 0; i < workspaces.length; i++) {
+    if (!inserted && workspaces[i].workspace > ws.workspace) {
+      out.push(ws)
+      inserted = true
+    }
+    out.push(workspaces[i])
+  }
+  if (!inserted) out.push(ws)
+  return out
+}
+
+function sortWorkspacesByNumber(config) {
+  var next = clone(config)
+  next.sortMode = "workspace"
+  next.workspaces = sortByNumber(next.workspaces)
+  return next
+}
+
+function workspaceIndex(config, workspaceId) {
+  var workspaces = config && config.workspaces ? config.workspaces : []
+  for (var i = 0; i < workspaces.length; i++) {
+    if (workspaces[i].id === workspaceId) return i
+  }
+  return -1
+}
+
+function moveWorkspaceBy(config, workspaceId, delta) {
+  var next = clone(config)
+  var index = workspaceIndex(next, workspaceId)
+  var target = index + parseInt(String(delta), 10)
+  if (index < 0 || !isFinite(target) || target < 0 || target >= next.workspaces.length) return next
+  if (target === index) return next
+  var item = next.workspaces.splice(index, 1)[0]
+  next.workspaces.splice(target, 0, item)
+  next.sortMode = "manual"
+  return next
+}
+
+function liveWorkspaceIds(hyprlandIds, clients, focusedId) {
+  var seen = {}
+  var values = hyprlandIds || []
+  for (var i = 0; i < values.length; i++) {
+    var id = parseInt(String(values[i]), 10)
+    if (id >= MIN_WORKSPACE && id <= MAX_WORKSPACE) seen[id] = true
+  }
+  var focus = parseInt(String(focusedId), 10)
+  if (focus >= MIN_WORKSPACE && focus <= MAX_WORKSPACE) seen[focus] = true
+  var list = clients || []
+  for (var c = 0; c < list.length; c++) {
+    var ws = parseInt(String(list[c].workspace), 10)
+    if (ws >= MIN_WORKSPACE && ws <= MAX_WORKSPACE) seen[ws] = true
+  }
+  var ids = []
+  for (var key in seen) ids.push(parseInt(key, 10))
+  ids.sort(function(a, b) { return a - b })
+  return ids
+}
+
+function mergeLiveWorkspaces(config, liveIds) {
+  var next = clone(config)
+  var added = false
+  var ids = liveIds || []
+  for (var i = 0; i < ids.length; i++) {
+    var number = clampWorkspace(ids[i])
+    if (findWorkspaceByNumber(next, number)) continue
+    var used = idsInUse(next.workspaces)
+    next.workspaces = insertByNumber(next.workspaces, emptyWorkspace(uniqueId("ws-" + number, used), String(number), number))
+    added = true
+  }
+  var sorted = false
+  if (next.sortMode !== "manual") {
+    var before = next.workspaces.map(function(ws) { return ws.id }).join(",")
+    next.workspaces = sortByNumber(next.workspaces)
+    next.sortMode = "workspace"
+    sorted = before !== next.workspaces.map(function(ws) { return ws.id }).join(",")
+  }
+  return { config: next, added: added, changed: added || sorted }
 }
 
 function nextFreeNumber(config) {
@@ -277,8 +372,7 @@ function ensureWorkspaceNumber(config, number) {
   var target = clampWorkspace(number)
   if (findWorkspaceByNumber(next, target)) return next
   var used = idsInUse(next.workspaces)
-  next.workspaces.push(emptyWorkspace(uniqueId("ws-" + target, used), String(target), target))
-  next.workspaces.sort(function(a, b) { return a.workspace - b.workspace })
+  next.workspaces = insertByNumber(next.workspaces, emptyWorkspace(uniqueId("ws-" + target, used), String(target), target))
   return next
 }
 
@@ -560,6 +654,19 @@ function desktopOptions(entries) {
   return options
 }
 
+function workspaceIdsKey(workspaces) {
+  return (workspaces || []).map(function(ws) { return ws.id }).join(",")
+}
+
+function rawWorkspaceIdsKey(raw) {
+  var data = raw
+  if (typeof raw === "string") {
+    try { data = JSON.parse(raw) } catch (e) { return "" }
+  }
+  if (!data || !Array.isArray(data.workspaces)) return ""
+  return workspaceIdsKey(data.workspaces)
+}
+
 function stringifyConfig(config) {
   return JSON.stringify(config, null, 2) + "\n"
 }
@@ -579,6 +686,10 @@ if (typeof module !== "undefined" && module.exports) {
     setFollowOnLaunch: setFollowOnLaunch,
     setPinWindows: setPinWindows,
     setShowStockWorkspaces: setShowStockWorkspaces,
+    sortWorkspacesByNumber: sortWorkspacesByNumber,
+    moveWorkspaceBy: moveWorkspaceBy,
+    mergeLiveWorkspaces: mergeLiveWorkspaces,
+    liveWorkspaceIds: liveWorkspaceIds,
     hideStockWorkspacesCommand: hideStockWorkspacesCommand,
     showStockWorkspacesCommand: showStockWorkspacesCommand,
     findWorkspace: findWorkspace,
@@ -601,6 +712,8 @@ if (typeof module !== "undefined" && module.exports) {
     windowFromOpenEvent: windowFromOpenEvent,
     launchCommand: launchCommand,
     desktopOptions: desktopOptions,
+    workspaceIdsKey: workspaceIdsKey,
+    rawWorkspaceIdsKey: rawWorkspaceIdsKey,
     stringifyConfig: stringifyConfig,
     clampWorkspace: clampWorkspace
   }

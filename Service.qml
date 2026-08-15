@@ -40,7 +40,10 @@ Item {
       root.config = parsed.config
     }
     root.ready = true
-    if (created) persist(root.config)
+    var merged = Model.mergeLiveWorkspaces(root.config, root.liveWorkspaceIds())
+    root.config = merged.config
+    var orderChanged = Model.rawWorkspaceIdsKey(raw) !== Model.workspaceIdsKey(root.config.workspaces)
+    if (created || merged.changed || orderChanged) persist(root.config)
     else syncRules()
     applyStockWorkspaces(root.config.showStockWorkspaces === true)
   }
@@ -108,6 +111,27 @@ Item {
     persist(Model.importOpenWindows(root.config, root.clients))
   }
 
+  function moveWorkspace(workspaceId, delta) {
+    persist(Model.moveWorkspaceBy(root.config, workspaceId, delta))
+  }
+
+  function sortWorkspacesByNumber() {
+    persist(Model.sortWorkspacesByNumber(root.config))
+  }
+
+  function liveWorkspaceIds() {
+    var hyprlandIds = []
+    var values = Hyprland.workspaces.values || []
+    for (var i = 0; i < values.length; i++) hyprlandIds.push(values[i].id)
+    return Model.liveWorkspaceIds(hyprlandIds, root.clients, root.focusedWorkspaceId)
+  }
+
+  function syncLiveWorkspaces() {
+    if (!root.ready || root.writing) return
+    var result = Model.mergeLiveWorkspaces(root.config, root.liveWorkspaceIds())
+    if (result.changed) persist(result.config)
+  }
+
   function focusWorkspace(number) {
     run(Model.focusCommand(number))
   }
@@ -171,6 +195,12 @@ Item {
     if (name === "openwindow") {
       var opened = Model.windowFromOpenEvent(event)
       placeWindow(opened, root.config.followOnLaunch !== false)
+      refreshWindows()
+      Qt.callLater(root.syncLiveWorkspaces)
+      return
+    }
+    if (name === "workspace" || name === "createworkspace" || name === "destroyworkspace") {
+      root.syncLiveWorkspaces()
       refreshWindows()
       return
     }
@@ -248,7 +278,10 @@ Item {
       waitForEnd: true
       onStreamFinished: root.clients = Model.parseClients(text)
     }
-    onExited: root.finishAssignActiveWindow()
+    onExited: {
+      root.finishAssignActiveWindow()
+      root.syncLiveWorkspaces()
+    }
   }
 
   Process {
@@ -282,7 +315,10 @@ Item {
 
   Connections {
     target: Hyprland
-    function onFocusedWorkspaceChanged() { root.refreshWindows() }
+    function onFocusedWorkspaceChanged() {
+      root.refreshWindows()
+      root.syncLiveWorkspaces()
+    }
     function onActiveToplevelChanged() { root.refreshWindows() }
     function onRawEvent(event) { root.handleHyprlandEvent(event) }
   }
