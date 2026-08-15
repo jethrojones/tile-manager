@@ -245,20 +245,38 @@ Panel {
                 spacing: Style.space(4)
 
                 Item {
-                  Layout.preferredWidth: Style.space(22)
+                  id: grip
+                  Layout.minimumWidth: Style.space(28)
+                  Layout.preferredWidth: Style.space(28)
+                  Layout.maximumWidth: Style.space(28)
+                  Layout.minimumHeight: Style.space(28)
                   Layout.preferredHeight: Style.space(28)
+                  implicitWidth: Style.space(28)
+                  implicitHeight: Style.space(28)
 
-                  Text {
+                  Grid {
                     anchors.centerIn: parent
-                    text: "󰇈"
-                    color: root.dim
-                    font.family: root.contentFontFamily
-                    font.pixelSize: Style.font.icon
+                    columns: 2
+                    rowSpacing: Style.space(3)
+                    columnSpacing: Style.space(3)
+
+                    Repeater {
+                      model: 6
+                      Rectangle {
+                        width: Style.space(4)
+                        height: Style.space(4)
+                        radius: width / 2
+                        color: gripArea.containsMouse || gripArea.drag.active
+                          ? root.contentForeground
+                          : root.dim
+                      }
+                    }
                   }
 
                   MouseArea {
                     id: gripArea
                     anchors.fill: parent
+                    hoverEnabled: true
                     cursorShape: Qt.SizeVerCursor
                     drag.target: workspaceCard
                     drag.axis: Drag.YAxis
