@@ -11,7 +11,7 @@ function defaultConfig() {
     version: CONFIG_VERSION,
     followOnLaunch: true,
     pinWindows: false,
-    showStockWorkspaces: false,
+    hideStockWorkspaces: false,
     workspaces: [
       emptyWorkspace("ws-1", "1", 1),
       emptyWorkspace("ws-2", "2", 2),
@@ -89,7 +89,7 @@ function normalizeConfig(raw) {
       version: CONFIG_VERSION,
       followOnLaunch: source.followOnLaunch !== false,
       pinWindows: source.pinWindows === true,
-      showStockWorkspaces: source.showStockWorkspaces === true,
+      hideStockWorkspaces: source.hideStockWorkspaces === true,
       workspaces: workspaces
     }
   }
@@ -309,9 +309,9 @@ function setPinWindows(config, enabled) {
   return next
 }
 
-function setShowStockWorkspaces(config, enabled) {
+function setHideStockWorkspaces(config, enabled) {
   var next = clone(config)
-  next.showStockWorkspaces = enabled === true
+  next.hideStockWorkspaces = enabled === true
   return next
 }
 
@@ -650,7 +650,7 @@ if (typeof module !== "undefined" && module.exports) {
     removeApp: removeApp,
     setFollowOnLaunch: setFollowOnLaunch,
     setPinWindows: setPinWindows,
-    setShowStockWorkspaces: setShowStockWorkspaces,
+    setHideStockWorkspaces: setHideStockWorkspaces,
     mergeLiveWorkspaces: mergeLiveWorkspaces,
     liveWorkspaceIds: liveWorkspaceIds,
     hideStockWorkspacesCommand: hideStockWorkspacesCommand,

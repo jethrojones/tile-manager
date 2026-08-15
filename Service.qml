@@ -45,7 +45,6 @@ Item {
     var orderChanged = Model.rawWorkspaceIdsKey(raw) !== Model.workspaceIdsKey(root.config.workspaces)
     if (created || merged.changed || orderChanged) persist(root.config)
     else syncRules()
-    applyStockWorkspaces(root.config.showStockWorkspaces === true)
   }
 
   function persist(next) {
@@ -98,9 +97,9 @@ Item {
     persist(Model.setPinWindows(root.config, enabled))
   }
 
-  function setShowStockWorkspaces(enabled) {
-    persist(Model.setShowStockWorkspaces(root.config, enabled))
-    applyStockWorkspaces(enabled === true)
+  function setHideStockWorkspaces(enabled) {
+    persist(Model.setHideStockWorkspaces(root.config, enabled))
+    applyStockWorkspaces(enabled !== true)
   }
 
   function applyStockWorkspaces(show) {

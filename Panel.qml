@@ -153,12 +153,12 @@ Panel {
 
           Toggle {
             width: parent.width
-            label: "Stock workspace numbers"
-            description: "Show Omarchy's 1–0 widget next to Tile Manager"
-            checked: service ? service.config.showStockWorkspaces === true : false
+            label: "Hide numbered workspaces"
+            description: "Turn off Omarchy's 1–0 widget. Off by default so your bar is unchanged until you choose."
+            checked: service ? service.config.hideStockWorkspaces === true : false
             foreground: root.contentForeground
             fontFamily: root.contentFontFamily
-            onClicked: if (service) service.setShowStockWorkspaces(!(service.config.showStockWorkspaces === true))
+            onClicked: if (service) service.setHideStockWorkspaces(!(service.config.hideStockWorkspaces === true))
           }
 
           Toggle {
