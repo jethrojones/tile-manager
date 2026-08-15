@@ -121,23 +121,13 @@ BarWidget {
         implicitWidth: wsButton.implicitWidth
         implicitHeight: wsButton.implicitHeight
 
-        Rectangle {
-          anchors.fill: parent
-          anchors.margins: Style.space(2)
-          visible: workspaceChip.focused
-          radius: Math.max(2, Style.cornerRadius)
-          color: "transparent"
-          border.width: Math.max(1, Style.spacing.hairline)
-          border.color: workspaceChip.mark
-        }
-
         WidgetButton {
           id: wsButton
           anchors.fill: parent
           bar: root.bar
           text: workspace && workspace.name ? workspace.name : ""
-          active: false
-          labelVisible: !workspaceChip.focused
+          active: workspaceChip.focused
+          activeColor: workspaceChip.mark
           tooltipText: "Workspace " + workspaceNumber + (workspace && workspace.apps && workspace.apps.length ? " · " + workspace.apps.length + " apps" : "")
           opacity: workspaceChip.occupied || workspaceChip.focused ? 1 : 0.5
           horizontalMargin: 8
@@ -153,29 +143,6 @@ BarWidget {
               root.focusWorkspace(workspaceNumber)
             }
           }
-        }
-
-        Text {
-          id: focusedLabel
-          visible: workspaceChip.focused
-          anchors.centerIn: parent
-          text: workspace && workspace.name ? workspace.name : ""
-          color: workspaceChip.mark
-          font.family: wsButton.fontFamily
-          font.pixelSize: wsButton.fontSize
-          font.bold: true
-          renderType: Text.NativeRendering
-        }
-
-        Rectangle {
-          visible: workspaceChip.focused && !root.vertical
-          anchors.horizontalCenter: parent.horizontalCenter
-          anchors.bottom: parent.bottom
-          anchors.bottomMargin: 1
-          width: Math.max(Style.space(12), focusedLabel.implicitWidth)
-          height: Style.space(2)
-          radius: height / 2
-          color: workspaceChip.mark
         }
       }
     }

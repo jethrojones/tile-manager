@@ -37,7 +37,7 @@ omarchy plugin add ~/projects/tile-manager --enable
 ## Usage
 
 - The bar always shows workspaces 1–5. 6–10 appear only when that space exists or is focused, same as Omarchy's numbered widget.
-- The current workspace is outlined, underlined, and bold in the theme's active-window color.
+- The current workspace name uses the theme's selected-window outline color.
 - Click a name to switch to that workspace.
 - Middle-click a name to launch its assigned apps.
 - Right-click a name, or click the cog, to rename spaces and assign apps.
