@@ -163,17 +163,6 @@ BarWidget {
         fixedHeight: root.barSize
         onPressed: function() { root.toggle() }
       }
-
-      Rectangle {
-        visible: root.opened && !root.vertical
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: Style.space(2)
-        width: Math.max(Style.space(10), manageButton.labelWidth)
-        height: Style.space(2)
-        radius: height / 2
-        color: Color.accent
-      }
     }
   }
 }
