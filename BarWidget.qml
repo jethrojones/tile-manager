@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import qs.Commons
 import qs.Ui
@@ -102,57 +103,76 @@ BarWidget {
       model: root.workspaces
 
       Item {
-        required property var modelData
+        id: workspaceChip
 
-        readonly property bool occupied: service.occupied(modelData.workspace)
-        readonly property bool focused: service.focusedWorkspaceId === modelData.workspace
+        readonly property var workspace: modelData
+        readonly property int workspaceNumber: workspace && workspace.workspace ? workspace.workspace : 0
+        readonly property bool occupied: service.occupied(workspaceNumber)
+        readonly property bool focused: {
+          var current = service.focusedWorkspaceId
+          if (!current && Hyprland.focusedWorkspace) current = Hyprland.focusedWorkspace.id
+          return current === workspaceNumber
+        }
+        readonly property color mark: Color.accent
 
         implicitWidth: wsButton.implicitWidth
         implicitHeight: wsButton.implicitHeight
+
+        Rectangle {
+          anchors.fill: parent
+          anchors.margins: Style.space(2)
+          visible: workspaceChip.focused
+          radius: Math.max(2, Style.cornerRadius)
+          color: "transparent"
+          border.width: Math.max(1, Style.spacing.hairline)
+          border.color: workspaceChip.mark
+        }
 
         WidgetButton {
           id: wsButton
           anchors.fill: parent
           bar: root.bar
-          text: modelData.name
-          active: focused
-          tooltipText: "Workspace " + modelData.workspace + (modelData.apps.length ? " · " + modelData.apps.length + " apps" : "")
-          opacity: occupied || focused ? 1 : 0.5
-          horizontalMargin: 6
+          text: workspace && workspace.name ? workspace.name : ""
+          active: false
+          labelVisible: !workspaceChip.focused
+          tooltipText: "Workspace " + workspaceNumber + (workspace && workspace.apps && workspace.apps.length ? " · " + workspace.apps.length + " apps" : "")
+          opacity: workspaceChip.occupied || workspaceChip.focused ? 1 : 0.5
+          horizontalMargin: 8
           verticalPadding: 6
           fixedWidth: root.vertical ? root.barSize : -1
           fixedHeight: root.barSize
           onPressed: function(buttonCode) {
             if (buttonCode === Qt.RightButton) {
-              root.openWorkspace(modelData.id)
+              root.openWorkspace(workspace.id)
             } else if (buttonCode === Qt.MiddleButton) {
-              service.launchWorkspace(modelData.id)
+              service.launchWorkspace(workspace.id)
             } else {
-              root.focusWorkspace(modelData.workspace)
+              root.focusWorkspace(workspaceNumber)
             }
           }
         }
 
-        Rectangle {
-          visible: parent.focused && !root.vertical
-          anchors.horizontalCenter: parent.horizontalCenter
-          anchors.bottom: parent.bottom
-          anchors.bottomMargin: Style.space(2)
-          width: Math.max(Style.space(10), wsButton.labelWidth)
-          height: Style.space(2)
-          radius: height / 2
-          color: Color.accent
+        Text {
+          id: focusedLabel
+          visible: workspaceChip.focused
+          anchors.centerIn: parent
+          text: workspace && workspace.name ? workspace.name : ""
+          color: workspaceChip.mark
+          font.family: wsButton.fontFamily
+          font.pixelSize: wsButton.fontSize
+          font.bold: true
+          renderType: Text.NativeRendering
         }
 
         Rectangle {
-          visible: parent.focused && root.vertical
-          anchors.verticalCenter: parent.verticalCenter
-          anchors.right: parent.right
-          anchors.rightMargin: Style.space(2)
-          width: Style.space(2)
-          height: Math.max(Style.space(10), Math.round(Style.bar.iconSlot * 0.55))
-          radius: width / 2
-          color: Color.accent
+          visible: workspaceChip.focused && !root.vertical
+          anchors.horizontalCenter: parent.horizontalCenter
+          anchors.bottom: parent.bottom
+          anchors.bottomMargin: 1
+          width: Math.max(Style.space(12), focusedLabel.implicitWidth)
+          height: Style.space(2)
+          radius: height / 2
+          color: workspaceChip.mark
         }
       }
     }
