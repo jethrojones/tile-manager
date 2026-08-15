@@ -43,7 +43,7 @@ omarchy plugin add ~/projects/tile-manager --enable
 - Right-click a name, or click the cog, to rename spaces and assign apps.
 - **Assign focused window** pins the window you are on.
 - **Assign open windows** parks each unique app on the workspace it is already using. Apps that roam, like terminals, are skipped.
-- **Hide 1–0 workspace widget** is in Settings at the top of the cog panel, and is off by default.
+- **Hide 1–0 workspace widget** is in Settings at the bottom of the cog panel, and is off by default.
 - **Start assigned apps when the computer logs in** opens assigned apps that are not already running, once per login session. It does not run when you enable the plugin. Use **Launch assigned apps now** to do the same immediately.
 - Press Escape to close the panel.
 

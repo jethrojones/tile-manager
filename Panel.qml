@@ -153,63 +153,6 @@ Panel {
 
           PanelSectionHeader {
             width: parent.width
-            text: "Settings"
-            foreground: root.contentForeground
-            fontFamily: root.contentFontFamily
-          }
-
-          Toggle {
-            width: parent.width
-            label: "Hide 1–0 workspace widget"
-            description: "Remove Omarchy's numbered 1–0 bar widget"
-            checked: service ? service.config.hideStockWorkspaces === true : false
-            foreground: root.contentForeground
-            fontFamily: root.contentFontFamily
-            onClicked: if (service) service.setHideStockWorkspaces(!(service.config.hideStockWorkspaces === true))
-          }
-
-          Toggle {
-            width: parent.width
-            label: "Start assigned apps when the computer logs in"
-            description: "Once per login session, open assigned apps that are not already running. Turning this on or enabling the plugin does not launch them."
-            checked: service ? service.config.autolaunchAtLogin === true : false
-            foreground: root.contentForeground
-            fontFamily: root.contentFontFamily
-            onClicked: if (service) service.setAutolaunchAtLogin(!(service.config.autolaunchAtLogin === true))
-          }
-
-          Toggle {
-            width: parent.width
-            label: "Follow launches"
-            description: "Switch to the app's workspace when it opens"
-            checked: service ? service.config.followOnLaunch !== false : true
-            foreground: root.contentForeground
-            fontFamily: root.contentFontFamily
-            onClicked: if (service) service.setFollowOnLaunch(!(service.config.followOnLaunch !== false))
-          }
-
-          Toggle {
-            width: parent.width
-            label: "Keep apps there"
-            description: "Move assigned apps back if they leave their workspace"
-            checked: service ? service.config.pinWindows === true : false
-            foreground: root.contentForeground
-            fontFamily: root.contentFontFamily
-            onClicked: if (service) service.setPinWindows(!(service.config.pinWindows !== false))
-          }
-
-          Button {
-            width: parent.width
-            text: "Launch assigned apps now"
-            foreground: root.contentForeground
-            fontFamily: root.contentFontFamily
-            onClicked: if (service) service.launchMissingAssignedApps()
-          }
-
-          PanelSeparator { width: parent.width; foreground: root.contentForeground }
-
-          PanelSectionHeader {
-            width: parent.width
             text: "Workspaces"
             foreground: root.contentForeground
             fontFamily: root.contentFontFamily
@@ -416,6 +359,63 @@ Panel {
             font.family: root.contentFontFamily
             font.pixelSize: Style.font.bodySmall
             wrapMode: Text.WordWrap
+          }
+
+          PanelSeparator { width: parent.width; foreground: root.contentForeground }
+
+          PanelSectionHeader {
+            width: parent.width
+            text: "Settings"
+            foreground: root.contentForeground
+            fontFamily: root.contentFontFamily
+          }
+
+          Toggle {
+            width: parent.width
+            label: "Hide 1–0 workspace widget"
+            description: "Remove Omarchy's numbered 1–0 bar widget"
+            checked: service ? service.config.hideStockWorkspaces === true : false
+            foreground: root.contentForeground
+            fontFamily: root.contentFontFamily
+            onClicked: if (service) service.setHideStockWorkspaces(!(service.config.hideStockWorkspaces === true))
+          }
+
+          Toggle {
+            width: parent.width
+            label: "Start assigned apps when the computer logs in"
+            description: "Once per login session, open assigned apps that are not already running. Turning this on or enabling the plugin does not launch them."
+            checked: service ? service.config.autolaunchAtLogin === true : false
+            foreground: root.contentForeground
+            fontFamily: root.contentFontFamily
+            onClicked: if (service) service.setAutolaunchAtLogin(!(service.config.autolaunchAtLogin === true))
+          }
+
+          Toggle {
+            width: parent.width
+            label: "Follow launches"
+            description: "Switch to the app's workspace when it opens"
+            checked: service ? service.config.followOnLaunch !== false : true
+            foreground: root.contentForeground
+            fontFamily: root.contentFontFamily
+            onClicked: if (service) service.setFollowOnLaunch(!(service.config.followOnLaunch !== false))
+          }
+
+          Toggle {
+            width: parent.width
+            label: "Keep apps there"
+            description: "Move assigned apps back if they leave their workspace"
+            checked: service ? service.config.pinWindows === true : false
+            foreground: root.contentForeground
+            fontFamily: root.contentFontFamily
+            onClicked: if (service) service.setPinWindows(!(service.config.pinWindows !== false))
+          }
+
+          Button {
+            width: parent.width
+            text: "Launch assigned apps now"
+            foreground: root.contentForeground
+            fontFamily: root.contentFontFamily
+            onClicked: if (service) service.launchMissingAssignedApps()
           }
         }
       }
