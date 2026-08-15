@@ -114,7 +114,7 @@ BarWidget {
           return current === workspaceNumber
         }
         readonly property color mark: Color.flatColor(
-          Color.pick("hyprland.active-border-foreground", Color.pick("bar.active", Color.accent)),
+          Color.pick("hyprland.active-border", Color.accent),
           Color.accent
         )
 
