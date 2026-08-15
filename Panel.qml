@@ -161,47 +161,82 @@ Panel {
           Repeater {
             model: root.workspaces
 
-            RowLayout {
+            Item {
               width: content.width
-              spacing: Style.space(6)
+              implicitHeight: workspaceRow.implicitHeight
 
-              Text {
-                Layout.fillWidth: true
-                text: modelData.name
-                color: modelData.id === root.selectedId ? root.contentForeground : root.dim
-                font.family: root.contentFontFamily
-                font.pixelSize: Style.font.body
-                font.bold: modelData.id === root.selectedId
-                elide: Text.ElideRight
+              Rectangle {
+                id: workspaceRow
+
+                readonly property bool selected: modelData.id === root.selectedId
+                readonly property color mark: Color.flatColor(
+                  Color.pick("hyprland.active-border", Color.accent),
+                  Color.accent
+                )
+
+                anchors.left: parent.left
+                anchors.right: parent.right
+                implicitHeight: workspaceInner.implicitHeight + Style.space(8)
+                radius: Style.cornerRadius
+                color: selected
+                  ? Style.selectedFillFor(root.contentForeground, Color.accent)
+                  : (rowMouse.containsMouse
+                    ? Style.hoverFillFor(root.contentForeground, Color.accent)
+                    : "transparent")
+                border.width: selected ? Math.max(2, Style.normalBorderWidth) : 0
+                border.color: selected ? workspaceRow.mark : "transparent"
 
                 MouseArea {
+                  id: rowMouse
                   anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
                   onClicked: root.selectWorkspace(modelData.id)
                 }
-              }
 
-              Text {
-                text: String(modelData.workspace)
-                color: root.dim
-                font.family: root.contentFontFamily
-                font.pixelSize: Style.font.caption
-              }
+                RowLayout {
+                  id: workspaceInner
+                  anchors.left: parent.left
+                  anchors.right: parent.right
+                  anchors.verticalCenter: parent.verticalCenter
+                  anchors.leftMargin: Style.space(8)
+                  anchors.rightMargin: Style.space(6)
+                  spacing: Style.space(6)
 
-              PanelActionButton {
-                iconText: "→"
-                tooltipText: "Go to workspace"
-                foreground: root.contentForeground
-                fontFamily: root.contentFontFamily
-                onClicked: root.goToWorkspace(modelData.workspace)
-              }
+                  Text {
+                    Layout.fillWidth: true
+                    text: modelData.name
+                    color: workspaceRow.selected ? root.contentForeground : root.dim
+                    font.family: root.contentFontFamily
+                    font.pixelSize: Style.font.body
+                    font.bold: workspaceRow.selected
+                    elide: Text.ElideRight
+                  }
 
-              PanelActionButton {
-                iconText: "×"
-                tooltipText: "Remove workspace"
-                foreground: root.contentForeground
-                hoverColor: root.bar ? root.bar.urgent : Color.urgent
-                fontFamily: root.contentFontFamily
-                onClicked: root.deleteWorkspace(modelData.id)
+                  Text {
+                    text: String(modelData.workspace)
+                    color: root.dim
+                    font.family: root.contentFontFamily
+                    font.pixelSize: Style.font.caption
+                  }
+
+                  PanelActionButton {
+                    iconText: "→"
+                    tooltipText: "Go to workspace"
+                    foreground: root.contentForeground
+                    fontFamily: root.contentFontFamily
+                    onClicked: root.goToWorkspace(modelData.workspace)
+                  }
+
+                  PanelActionButton {
+                    iconText: "×"
+                    tooltipText: "Remove workspace"
+                    foreground: root.contentForeground
+                    hoverColor: root.bar ? root.bar.urgent : Color.urgent
+                    fontFamily: root.contentFontFamily
+                    onClicked: root.deleteWorkspace(modelData.id)
+                  }
+                }
               }
             }
           }
