@@ -119,7 +119,7 @@ Panel {
     bar: root.bar
     open: root.opened
     focusTarget: keyCatcher
-    contentWidth: panel.fittedContentWidth(Style.space(360))
+    contentWidth: panel.fittedContentWidth(Style.space(420))
     contentHeight: panel.fittedContentHeight(content.implicitHeight, Style.space(560))
 
     PanelKeyCatcher {
@@ -223,149 +223,34 @@ Panel {
 
           Repeater {
             model: root.workspaces
+            delegate: workspaceRowDelegate
+          }
 
-            Rectangle {
-              id: workspaceCard
-              required property var modelData
+          Component {
+            id: workspaceRowDelegate
+
+            WorkspaceRow {
               width: content.width
-              height: workspaceRow.implicitHeight + Style.space(8)
-              radius: Style.cornerRadius
-              color: modelData.id === root.selectedId
-                ? Style.hoverFillFor(root.contentForeground, Color.accent)
-                : "transparent"
-              z: gripArea.drag.active ? 2 : 0
-
-              RowLayout {
-                id: workspaceRow
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.leftMargin: Style.space(4)
-                anchors.rightMargin: Style.space(4)
-                spacing: Style.space(4)
-
-                Item {
-                  id: grip
-                  Layout.minimumWidth: Style.space(28)
-                  Layout.preferredWidth: Style.space(28)
-                  Layout.maximumWidth: Style.space(28)
-                  Layout.minimumHeight: Style.space(28)
-                  Layout.preferredHeight: Style.space(28)
-                  implicitWidth: Style.space(28)
-                  implicitHeight: Style.space(28)
-
-                  Grid {
-                    anchors.centerIn: parent
-                    columns: 2
-                    rowSpacing: Style.space(3)
-                    columnSpacing: Style.space(3)
-
-                    Repeater {
-                      model: 6
-                      Rectangle {
-                        width: Style.space(4)
-                        height: Style.space(4)
-                        radius: width / 2
-                        color: gripArea.containsMouse || gripArea.drag.active
-                          ? root.contentForeground
-                          : root.dim
-                      }
-                    }
-                  }
-
-                  MouseArea {
-                    id: gripArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.SizeVerCursor
-                    drag.target: workspaceCard
-                    drag.axis: Drag.YAxis
-                    onPressed: {
-                      scroller.interactive = false
-                      root.selectWorkspace(workspaceCard.modelData.id)
-                    }
-                    onReleased: {
-                      scroller.interactive = true
-                      root.finishDrag(workspaceCard.modelData.id, workspaceCard.y, workspaceCard.height)
-                      workspaceCard.y = 0
-                    }
-                  }
-                }
-
-                WidgetButton {
-                  bar: root.bar
-                  text: modelData.name
-                  tooltipText: "Select " + modelData.name
-                  onPressed: function() { root.selectWorkspace(modelData.id) }
-                }
-
-                NumberField {
-                  id: workspaceNumber
-                  label: ""
-                  value: modelData.workspace
-                  from: 1
-                  to: 10
-                  foreground: root.contentForeground
-                  fontFamily: root.contentFontFamily
-                  fieldWidth: Style.space(56)
-                  onModified: function(value) {
-                    if (service) service.setWorkspaceNumber(modelData.id, value)
-                  }
-                  Connections {
-                    target: workspaceNumber.field
-                    function onActiveFocusChanged() { root.editingNumber = workspaceNumber.field.activeFocus }
-                  }
-                }
-
-                Item { Layout.fillWidth: true }
-
-                PanelActionButton {
-                  iconText: "󰁝"
-                  tooltipText: "Move up"
-                  foreground: root.contentForeground
-                  fontFamily: root.contentFontFamily
-                  onClicked: moveWorkspace(modelData.id, -1)
-                }
-
-                PanelActionButton {
-                  iconText: "󰁅"
-                  tooltipText: "Move down"
-                  foreground: root.contentForeground
-                  fontFamily: root.contentFontFamily
-                  onClicked: moveWorkspace(modelData.id, 1)
-                }
-
-                PanelActionButton {
-                  iconText: "󰁔"
-                  tooltipText: "Go to workspace"
-                  foreground: root.contentForeground
-                  fontFamily: root.contentFontFamily
-                  onClicked: goToWorkspace(modelData.workspace)
-                }
-
-                PanelActionButton {
-                  iconText: "󰐊"
-                  tooltipText: "Launch assigned apps"
-                  foreground: root.contentForeground
-                  fontFamily: root.contentFontFamily
-                  onClicked: launchSelectedWorkspace(modelData.id)
-                }
-
-                PanelActionButton {
-                  iconText: "󰆴"
-                  tooltipText: "Remove workspace"
-                  foreground: root.contentForeground
-                  hoverColor: root.bar ? root.bar.urgent : Color.urgent
-                  fontFamily: root.contentFontFamily
-                  onClicked: deleteWorkspace(modelData.id)
-                }
+              workspace: modelData
+              selected: modelData && modelData.id === root.selectedId
+              foreground: root.contentForeground
+              dim: root.dim
+              fontFamily: root.contentFontFamily
+              bar: root.bar
+              onSelectRequested: root.selectWorkspace(workspace.id)
+              onMoveRequested: function(delta) { root.moveWorkspace(workspace.id, delta) }
+              onDragStarted: scroller.interactive = false
+              onDragFinished: function(offsetY, rowHeight) {
+                scroller.interactive = true
+                root.finishDrag(workspace.id, offsetY, rowHeight)
               }
-
-              MouseArea {
-                z: -1
-                anchors.fill: parent
-                onClicked: root.selectWorkspace(modelData.id)
+              onGoRequested: root.goToWorkspace(workspace.workspace)
+              onLaunchRequested: root.launchSelectedWorkspace(workspace.id)
+              onDeleteRequested: root.deleteWorkspace(workspace.id)
+              onNumberChanged: function(value) {
+                if (root.service) root.service.setWorkspaceNumber(workspace.id, value)
               }
+              onNumberFocusChanged: function(on) { root.editingNumber = on }
             }
           }
 
