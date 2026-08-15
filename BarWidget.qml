@@ -113,7 +113,10 @@ BarWidget {
           if (!current && Hyprland.focusedWorkspace) current = Hyprland.focusedWorkspace.id
           return current === workspaceNumber
         }
-        readonly property color mark: Color.accent
+        readonly property color mark: Color.flatColor(
+          Color.pick("hyprland.active-border-foreground", Color.pick("bar.active", Color.accent)),
+          Color.accent
+        )
 
         implicitWidth: wsButton.implicitWidth
         implicitHeight: wsButton.implicitHeight
