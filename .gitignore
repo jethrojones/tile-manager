@@ -1,0 +1,4 @@
+*.qmlc
+*.jsc
+.qmllint.ini
+node_modules/

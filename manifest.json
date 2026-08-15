@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.jethrojones.tile-manager",
+  "name": "Tile Manager",
+  "version": "1.0.0",
+  "author": "Jethro Jones",
+  "license": "MIT",
+  "description": "Name Hyprland workspaces and keep assigned apps launching there from the Omarchy bar.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Tile Manager",
+    "description": "Named workspaces with app assignments",
+    "category": "Compositor",
+    "aliases": [
+      "tile-manager",
+      "workspaces",
+      "workspace-apps"
+    ],
+    "allowMultiple": false,
+    "defaultSection": "left"
+  }
+}

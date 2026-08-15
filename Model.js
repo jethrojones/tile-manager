@@ -1,0 +1,454 @@
+var PLUGIN_ID = "io.github.jethrojones.tile-manager"
+var CONFIG_VERSION = 1
+var MIN_WORKSPACE = 1
+var MAX_WORKSPACE = 10
+function pluginId() {
+  return PLUGIN_ID
+}
+
+function defaultConfig() {
+  return {
+    version: CONFIG_VERSION,
+    followOnLaunch: true,
+    workspaces: [
+      emptyWorkspace("ws-1", "1", 1),
+      emptyWorkspace("ws-2", "2", 2),
+      emptyWorkspace("ws-3", "3", 3),
+      emptyWorkspace("ws-4", "4", 4),
+      emptyWorkspace("ws-5", "5", 5)
+    ]
+  }
+}
+
+function emptyWorkspace(id, name, workspace) {
+  return {
+    id: String(id),
+    name: String(name),
+    workspace: clampWorkspace(workspace),
+    apps: []
+  }
+}
+
+function clampWorkspace(value) {
+  var n = parseInt(String(value), 10)
+  if (!isFinite(n)) n = MIN_WORKSPACE
+  return Math.max(MIN_WORKSPACE, Math.min(MAX_WORKSPACE, n))
+}
+
+function slugify(value) {
+  var text = String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+  return text || "item"
+}
+
+function uniqueId(prefix, used) {
+  var base = slugify(prefix)
+  var id = base
+  var n = 2
+  while (used[id]) {
+    id = base + "-" + n
+    n += 1
+  }
+  used[id] = true
+  return id
+}
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value === undefined ? null : value))
+}
+
+function parseConfig(raw) {
+  if (raw === undefined || raw === null || raw === "") return { ok: true, config: defaultConfig(), created: true }
+  if (typeof raw === "object") return normalizeConfig(raw)
+  try {
+    return normalizeConfig(JSON.parse(String(raw)))
+  } catch (e) {
+    return { ok: false, error: "Config is not valid JSON", config: defaultConfig() }
+  }
+}
+
+function normalizeConfig(raw) {
+  var source = raw && typeof raw === "object" ? raw : {}
+  var used = {}
+  var workspaces = []
+  var incoming = Array.isArray(source.workspaces) ? source.workspaces : []
+
+  for (var i = 0; i < incoming.length; i++) {
+    var ws = normalizeWorkspace(incoming[i], used)
+    if (ws) workspaces.push(ws)
+  }
+
+  if (workspaces.length === 0) workspaces = defaultConfig().workspaces
+
+  return {
+    ok: true,
+    config: {
+      version: CONFIG_VERSION,
+      followOnLaunch: source.followOnLaunch !== false,
+      workspaces: workspaces
+    }
+  }
+}
+
+function normalizeWorkspace(raw, used) {
+  if (!raw || typeof raw !== "object") return null
+  var name = String(raw.name || raw.label || "").trim()
+  if (!name) name = String(raw.workspace || raw.id || "Workspace")
+  var id = uniqueId(raw.id || name, used)
+  var apps = []
+  var appUsed = {}
+  var incoming = Array.isArray(raw.apps) ? raw.apps : []
+  for (var i = 0; i < incoming.length; i++) {
+    var app = normalizeApp(incoming[i], appUsed)
+    if (app) apps.push(app)
+  }
+  return {
+    id: id,
+    name: name.slice(0, 24),
+    workspace: clampWorkspace(raw.workspace),
+    apps: apps
+  }
+}
+
+function normalizeApp(raw, used) {
+  if (!raw || typeof raw !== "object") return null
+  var name = String(raw.name || raw.label || raw.desktopId || raw.class || "").trim()
+  var desktopId = normalizeDesktopId(raw.desktopId || raw.id || "")
+  var klass = String(raw.class || raw.startupClass || "").trim()
+  var title = String(raw.title || "").trim()
+  if (!name && !desktopId && !klass) return null
+  if (!name) name = desktopId || klass
+  var id = uniqueId(raw.id || desktopId || klass || name, used)
+  return {
+    id: id,
+    name: name.slice(0, 48),
+    desktopId: desktopId,
+    class: klass,
+    title: title
+  }
+}
+
+function normalizeDesktopId(id) {
+  var value = String(id || "").trim()
+  if (value.slice(-8) === ".desktop") value = value.slice(0, -8)
+  return value
+}
+
+function findWorkspace(config, workspaceId) {
+  var workspaces = config && config.workspaces ? config.workspaces : []
+  for (var i = 0; i < workspaces.length; i++) {
+    if (workspaces[i].id === workspaceId) return workspaces[i]
+  }
+  return null
+}
+
+function addWorkspace(config, name, workspace) {
+  var next = clone(config)
+  var number = workspace || nextFreeNumber(next)
+  if (!number) return next
+  var used = idsInUse(next.workspaces)
+  var label = String(name || "").trim() || String(number)
+  next.workspaces.push(emptyWorkspace(uniqueId(label, used), label.slice(0, 24), number))
+  return next
+}
+
+function nextFreeNumber(config) {
+  var used = {}
+  var workspaces = config.workspaces || []
+  for (var i = 0; i < workspaces.length; i++) used[workspaces[i].workspace] = true
+  for (var n = MIN_WORKSPACE; n <= MAX_WORKSPACE; n++) {
+    if (!used[n]) return n
+  }
+  return 0
+}
+
+function idsInUse(items) {
+  var used = {}
+  for (var i = 0; i < items.length; i++) used[items[i].id] = true
+  return used
+}
+
+function renameWorkspace(config, workspaceId, name) {
+  var next = clone(config)
+  var ws = findWorkspace(next, workspaceId)
+  if (!ws) return next
+  var label = String(name || "").trim()
+  if (label) ws.name = label.slice(0, 24)
+  return next
+}
+
+function setWorkspaceNumber(config, workspaceId, workspace) {
+  var next = clone(config)
+  var ws = findWorkspace(next, workspaceId)
+  if (!ws) return next
+  ws.workspace = clampWorkspace(workspace)
+  return next
+}
+
+function removeWorkspace(config, workspaceId) {
+  var next = clone(config)
+  next.workspaces = next.workspaces.filter(function(ws) { return ws.id !== workspaceId })
+  if (next.workspaces.length === 0) next.workspaces = defaultConfig().workspaces
+  return next
+}
+
+function addApp(config, workspaceId, app) {
+  var next = clone(config)
+  var ws = findWorkspace(next, workspaceId)
+  if (!ws) return next
+  var used = idsInUse(ws.apps)
+  var normalized = normalizeApp(app, used)
+  if (!normalized || !appHasMatch(normalized)) return next
+  for (var i = 0; i < ws.apps.length; i++) {
+    if (sameApp(ws.apps[i], normalized)) return next
+  }
+  removeAppEverywhere(next, normalized)
+  ws = findWorkspace(next, workspaceId)
+  ws.apps.push(normalized)
+  return next
+}
+
+function appHasMatch(app) {
+  return !!(app && (app.class || app.title))
+}
+
+function sameApp(left, right) {
+  if (left.desktopId && right.desktopId && left.desktopId === right.desktopId) return true
+  if (left.class && right.class && left.class.toLowerCase() === right.class.toLowerCase()) return true
+  return false
+}
+
+function removeAppEverywhere(config, app) {
+  for (var i = 0; i < config.workspaces.length; i++) {
+    config.workspaces[i].apps = config.workspaces[i].apps.filter(function(existing) {
+      return !sameApp(existing, app)
+    })
+  }
+}
+
+function removeApp(config, workspaceId, appId) {
+  var next = clone(config)
+  var ws = findWorkspace(next, workspaceId)
+  if (!ws) return next
+  ws.apps = ws.apps.filter(function(app) { return app.id !== appId })
+  return next
+}
+
+function setFollowOnLaunch(config, enabled) {
+  var next = clone(config)
+  next.followOnLaunch = enabled !== false
+  return next
+}
+
+function escapeRe2(value) {
+  return String(value || "").replace(/[\\^$.|?*+()\[\]{}]/g, "\\$&")
+}
+
+function escapeLuaString(value) {
+  return String(value || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")
+}
+
+function exactClassPattern(klass) {
+  return "^" + escapeRe2(klass) + "$"
+}
+
+function workspaceEffect(number, followOnLaunch) {
+  return followOnLaunch === false ? String(number) + " silent" : String(number)
+}
+
+function appMatch(app) {
+  var match = {}
+  if (app.class) match.class = exactClassPattern(app.class)
+  if (app.title) match.title = exactClassPattern(app.title)
+  return match
+}
+
+function generateLua(config) {
+  var lines = [
+    "-- Generated by " + PLUGIN_ID + ". Do not edit.",
+    "-- Source of truth: ~/.config/omarchy/tile-manager.json",
+    ""
+  ]
+  var follow = !config || config.followOnLaunch !== false
+  var workspaces = config && config.workspaces ? config.workspaces : []
+  var wrote = false
+
+  for (var i = 0; i < workspaces.length; i++) {
+    var ws = workspaces[i]
+    for (var j = 0; j < ws.apps.length; j++) {
+      var app = ws.apps[j]
+      var match = appMatch(app)
+      if (!match.class && !match.title) continue
+      wrote = true
+      lines.push(luaWindowRule(app, ws, match, follow))
+    }
+  }
+
+  if (!wrote) lines.push("-- No app assignments yet.")
+  lines.push("")
+  return lines.join("\n")
+}
+
+function luaWindowRule(app, ws, match, follow) {
+  var parts = []
+  if (match.class) parts.push('class = "' + escapeLuaString(match.class) + '"')
+  if (match.title) parts.push('title = "' + escapeLuaString(match.title) + '"')
+  return 'o.window({ ' + parts.join(", ") + ' }, { workspace = "' + escapeLuaString(workspaceEffect(ws.workspace, follow)) + '" }) -- ' + escapeLuaString(app.name)
+}
+
+function parseJsonProcess(raw) {
+  try {
+    return JSON.parse(String(raw || ""))
+  } catch (e) {
+    return null
+  }
+}
+
+function parseActiveWindow(raw) {
+  var data = parseJsonProcess(raw)
+  if (!data || typeof data !== "object") return null
+  return {
+    class: String(data.class || ""),
+    title: String(data.title || ""),
+    address: String(data.address || ""),
+    workspace: data.workspace && data.workspace.id ? data.workspace.id : 0
+  }
+}
+
+function parseClients(raw) {
+  var data = parseJsonProcess(raw)
+  if (!Array.isArray(data)) return []
+  var clients = []
+  for (var i = 0; i < data.length; i++) {
+    var item = data[i]
+    if (!item) continue
+    clients.push({
+      class: String(item.class || ""),
+      title: String(item.title || ""),
+      address: String(item.address || ""),
+      workspace: item.workspace && item.workspace.id ? item.workspace.id : 0
+    })
+  }
+  return clients
+}
+
+function workspaceOccupied(clients, workspaceNumber) {
+  for (var i = 0; i < clients.length; i++) {
+    if (clients[i].workspace === workspaceNumber) return true
+  }
+  return false
+}
+
+function findAssignedWorkspaceForClass(config, klass) {
+  var needle = String(klass || "").toLowerCase()
+  if (!needle) return null
+  var workspaces = config && config.workspaces ? config.workspaces : []
+  for (var i = 0; i < workspaces.length; i++) {
+    var apps = workspaces[i].apps || []
+    for (var j = 0; j < apps.length; j++) {
+      if (String(apps[j].class || "").toLowerCase() === needle) return workspaces[i]
+    }
+  }
+  return null
+}
+
+function appFromDesktopEntry(entry) {
+  if (!entry) return null
+  var desktopId = normalizeDesktopId(entry.id || "")
+  var klass = String(entry.startupClass || "").trim()
+  var name = String(entry.name || desktopId || "").trim()
+  if (!desktopId && !klass && !name) return null
+  return {
+    name: name || desktopId || klass,
+    desktopId: desktopId,
+    class: klass || desktopId,
+    title: ""
+  }
+}
+
+function appFromWindow(window) {
+  if (!window) return null
+  var klass = String(window.class || "").trim()
+  var title = String(window.title || "").trim()
+  if (!klass && !title) return null
+  return {
+    name: title || klass,
+    desktopId: "",
+    class: klass,
+    title: klass ? "" : title
+  }
+}
+
+function focusCommand(workspaceNumber) {
+  var id = clampWorkspace(workspaceNumber)
+  return "hyprctl dispatch " + shellQuote('hl.dsp.focus({ workspace = "' + id + '" })')
+}
+
+function launchCommand(app) {
+  var pattern = escapeRe2(app.class || app.desktopId || app.name || "")
+  var launch = ""
+  if (app.desktopId) launch = "uwsm-app -- gtk-launch " + shellQuote(app.desktopId + ".desktop")
+  else if (app.class) launch = "uwsm-app -- " + shellQuote(app.class)
+  else return ""
+  if (!pattern) return launch
+  return "omarchy-launch-or-focus " + shellQuote(pattern) + " " + shellQuote(launch)
+}
+
+function shellQuote(value) {
+  return "'" + String(value || "").replace(/'/g, "'\\''") + "'"
+}
+
+function desktopOptions(entries) {
+  var options = []
+  var seen = {}
+  var list = entries || []
+  for (var i = 0; i < list.length; i++) {
+    var entry = list[i].entry ? list[i].entry : list[i]
+    if (!entry || entry.noDisplay) continue
+    var app = appFromDesktopEntry(entry)
+    if (!app || !app.desktopId || seen[app.desktopId]) continue
+    seen[app.desktopId] = true
+    options.push({
+      value: app.desktopId,
+      label: app.name,
+      description: app.class || app.desktopId,
+      app: app
+    })
+  }
+  options.sort(function(a, b) { return a.label.toLowerCase() < b.label.toLowerCase() ? -1 : 1 })
+  return options
+}
+
+function stringifyConfig(config) {
+  return JSON.stringify(config, null, 2) + "\n"
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    PLUGIN_ID: PLUGIN_ID,
+    defaultConfig: defaultConfig,
+    parseConfig: parseConfig,
+    normalizeConfig: normalizeConfig,
+    addWorkspace: addWorkspace,
+    renameWorkspace: renameWorkspace,
+    setWorkspaceNumber: setWorkspaceNumber,
+    removeWorkspace: removeWorkspace,
+    addApp: addApp,
+    removeApp: removeApp,
+    setFollowOnLaunch: setFollowOnLaunch,
+    findWorkspace: findWorkspace,
+    escapeRe2: escapeRe2,
+    escapeLuaString: escapeLuaString,
+    generateLua: generateLua,
+    parseActiveWindow: parseActiveWindow,
+    parseClients: parseClients,
+    workspaceOccupied: workspaceOccupied,
+    findAssignedWorkspaceForClass: findAssignedWorkspaceForClass,
+    appFromDesktopEntry: appFromDesktopEntry,
+    appFromWindow: appFromWindow,
+    focusCommand: focusCommand,
+    launchCommand: launchCommand,
+    desktopOptions: desktopOptions,
+    stringifyConfig: stringifyConfig,
+    clampWorkspace: clampWorkspace
+  }
+}
