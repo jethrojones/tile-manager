@@ -200,6 +200,24 @@ function liveWorkspaceIds(hyprlandIds, clients, focusedId) {
   return ids
 }
 
+function barWorkspaces(config, focusedId, liveIds) {
+  var ids = [1, 2, 3, 4, 5]
+  var live = liveIds || []
+  var focus = parseInt(String(focusedId), 10)
+  for (var i = 0; i < live.length; i++) {
+    var id = parseInt(String(live[i]), 10)
+    if (id >= 6 && id <= MAX_WORKSPACE && ids.indexOf(id) === -1) ids.push(id)
+  }
+  if (focus >= 6 && focus <= MAX_WORKSPACE && ids.indexOf(focus) === -1) ids.push(focus)
+  ids.sort(function(left, right) { return left - right })
+  var result = []
+  for (var n = 0; n < ids.length; n++) {
+    var ws = findWorkspaceByNumber(config, ids[n])
+    result.push(ws || emptyWorkspace("ws-" + ids[n], String(ids[n]), ids[n]))
+  }
+  return result
+}
+
 function mergeLiveWorkspaces(config, liveIds) {
   var next = clone(config)
   var added = false
@@ -683,6 +701,7 @@ if (typeof module !== "undefined" && module.exports) {
     setHideStockWorkspaces: setHideStockWorkspaces,
     setAutolaunchAtLogin: setAutolaunchAtLogin,
     mergeLiveWorkspaces: mergeLiveWorkspaces,
+    barWorkspaces: barWorkspaces,
     liveWorkspaceIds: liveWorkspaceIds,
     hideStockWorkspacesCommand: hideStockWorkspacesCommand,
     showStockWorkspacesCommand: showStockWorkspacesCommand,

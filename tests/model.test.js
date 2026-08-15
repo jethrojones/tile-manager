@@ -44,6 +44,25 @@ test("stock workspace widget can be hidden and restored", () => {
   assert.match(Model.showStockWorkspacesCommand(), /--before io.github.jethrojones.tile-manager/)
 })
 
+test("bar shows 1-5 plus only live or focused extra workspaces", () => {
+  const cfg = Model.parseConfig({
+    workspaces: [
+      { id: "comms", name: "Comms (2)", workspace: 2, apps: [] },
+      { id: "coding", name: "Coding", workspace: 8, apps: [] },
+      { id: "ten", name: "10", workspace: 10, apps: [] },
+      { id: "six", name: "6", workspace: 6, apps: [] }
+    ]
+  }).config
+  const onTwo = Model.barWorkspaces(cfg, 2, [2, 3])
+  assert.strictEqual(onTwo.map((ws) => ws.workspace).join(","), "1,2,3,4,5")
+  assert.strictEqual(onTwo[1].name, "Comms (2)")
+  const onEight = Model.barWorkspaces(cfg, 8, [3, 8])
+  assert.strictEqual(onEight.map((ws) => ws.workspace).join(","), "1,2,3,4,5,8")
+  assert.strictEqual(onEight[5].name, "Coding")
+  const tenOccupied = Model.barWorkspaces(cfg, 2, [2, 10])
+  assert.strictEqual(tenOccupied.map((ws) => ws.workspace).join(","), "1,2,3,4,5,10")
+})
+
 test("live workspaces are created and sorted by number", () => {
   let cfg = Model.parseConfig({
     workspaces: [

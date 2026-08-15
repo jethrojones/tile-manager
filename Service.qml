@@ -33,6 +33,13 @@ Item {
 
   readonly property var workspaces: config && config.workspaces ? config.workspaces : []
   readonly property int focusedWorkspaceId: Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : 0
+  readonly property var liveIds: {
+    var hyprlandIds = []
+    var values = Hyprland.workspaces.values || []
+    for (var i = 0; i < values.length; i++) hyprlandIds.push(values[i].id)
+    return Model.liveWorkspaceIds(hyprlandIds, root.clients, root.focusedWorkspaceId)
+  }
+  readonly property var barWorkspaces: Model.barWorkspaces(config, focusedWorkspaceId, liveIds)
 
   function applyParsed(raw, created) {
     var parsed = Model.parseConfig(raw)

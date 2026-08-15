@@ -12,7 +12,7 @@ BarWidget {
 
   readonly property bool opened: panelLoader.item ? panelLoader.item.opened === true : false
   readonly property bool popoutSwitchClosing: panelLoader.item ? panelLoader.item.popoutSwitchClosing === true : false
-  readonly property var workspaces: service.workspaces
+  readonly property var workspaces: service.barWorkspaces
   readonly property real trailingGap: root.vertical ? 0 : Style.spaceReal(1.5)
   // Hide the bar host's centered mark — this widget is a row of names, so a
   // slot-wide 55% pill lands under the middle numbers instead of the active one.

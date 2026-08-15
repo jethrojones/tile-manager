@@ -36,7 +36,7 @@ omarchy plugin add ~/projects/tile-manager --enable
 
 ## Usage
 
-- Used Hyprland workspaces appear in the bar automatically, in number order.
+- The bar always shows workspaces 1–5. 6–10 appear only when that space exists or is focused, same as Omarchy's numbered widget.
 - The current workspace is outlined, underlined, and bold in the theme's active-window color.
 - Click a name to switch to that workspace.
 - Middle-click a name to launch its assigned apps.
