@@ -170,8 +170,8 @@ Panel {
 
           Toggle {
             width: parent.width
-            label: "Launch assigned apps at login"
-            description: "Start missing assigned apps when you log in. Already-open apps are left alone."
+            label: "Start assigned apps when the computer logs in"
+            description: "Once per login session, open assigned apps that are not already running. Turning this on or enabling the plugin does not launch them."
             checked: service ? service.config.autolaunchAtLogin === true : false
             foreground: root.contentForeground
             fontFamily: root.contentFontFamily

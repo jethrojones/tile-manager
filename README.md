@@ -44,7 +44,7 @@ omarchy plugin add ~/projects/tile-manager --enable
 - **Assign focused window** pins the window you are on.
 - **Assign open windows** parks each unique app on the workspace it is already using. Apps that roam, like terminals, are skipped.
 - **Hide 1–0 workspace widget** is in Settings at the top of the cog panel, and is off by default.
-- **Launch assigned apps at login** starts any assigned app that is not already running. Use **Launch assigned apps now** to do the same without logging out.
+- **Start assigned apps when the computer logs in** opens assigned apps that are not already running, once per login session. It does not run when you enable the plugin. Use **Launch assigned apps now** to do the same immediately.
 - Press Escape to close the panel.
 
 Assigned apps open on their workspace through generated Hyprland window rules. **Follow launches** (on by default) also switches you there. If the app is already running, `omarchy-launch-or-focus` jumps to it.
