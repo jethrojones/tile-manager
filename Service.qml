@@ -90,6 +90,14 @@ Item {
     persist(Model.setFollowOnLaunch(root.config, enabled))
   }
 
+  function setPinWindows(enabled) {
+    persist(Model.setPinWindows(root.config, enabled))
+  }
+
+  function importOpenWindows() {
+    persist(Model.importOpenWindows(root.config, root.clients))
+  }
+
   function focusWorkspace(number) {
     run(Model.focusCommand(number))
   }
@@ -108,6 +116,10 @@ Item {
 
   function assignActiveWindow(workspaceId) {
     pendingAssignWorkspaceId = workspaceId
+    if (root.clients.length) {
+      finishAssignActiveWindow()
+      return true
+    }
     if (activeProcess.running) return true
     activeProcess.running = true
     return true
@@ -117,12 +129,45 @@ Item {
     var workspaceId = pendingAssignWorkspaceId
     if (!workspaceId) return
     pendingAssignWorkspaceId = ""
-    var app = Model.appFromWindow(root.activeWindow)
+    var window = Model.focusedClient(root.clients) || root.activeWindow
+    var app = Model.appFromWindow(window)
     if (!app || (!app.class && !app.title)) {
       root.lastError = "Focused window has no class or title to match"
       return
     }
     addApp(workspaceId, app)
+  }
+
+  function placeWindow(window, follow) {
+    var assigned = Model.findAssignedWorkspaceForWindow(root.config, window)
+    if (!assigned || !window || !window.address) return false
+    if (window.workspace === assigned.workspace) {
+      if (follow) focusWorkspace(assigned.workspace)
+      return true
+    }
+    var command = Model.moveCommand(window.address, assigned.workspace, follow !== false)
+    if (command) run(command)
+    return true
+  }
+
+  function enforceAssignments() {
+    if (!root.config || root.config.pinWindows === false) return
+    var list = root.clients || []
+    for (var i = 0; i < list.length; i++) placeWindow(list[i], false)
+  }
+
+  function handleHyprlandEvent(event) {
+    var name = String(event && event.name ? event.name : "")
+    if (name === "openwindow") {
+      var opened = Model.windowFromOpenEvent(event)
+      placeWindow(opened, root.config.followOnLaunch !== false)
+      refreshWindows()
+      return
+    }
+    if (name === "movewindow" || name === "movewindowv2" || name === "closewindow") {
+      refreshWindows()
+      if (root.config.pinWindows !== false) Qt.callLater(root.enforceAssignments)
+    }
   }
 
   function refreshWindows() {
@@ -193,6 +238,7 @@ Item {
       waitForEnd: true
       onStreamFinished: root.clients = Model.parseClients(text)
     }
+    onExited: root.finishAssignActiveWindow()
   }
 
   Process {
@@ -228,5 +274,6 @@ Item {
     target: Hyprland
     function onFocusedWorkspaceChanged() { root.refreshWindows() }
     function onActiveToplevelChanged() { root.refreshWindows() }
+    function onRawEvent(event) { root.handleHyprlandEvent(event) }
   }
 }

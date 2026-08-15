@@ -28,6 +28,8 @@ omarchy plugin disable omarchy.workspaces
 - Click a workspace name in the bar to switch to it.
 - Middle-click a name to launch its assigned apps.
 - Right-click a name, or click the cog, to manage names and app assignments.
+- **Assign open windows** parks each unique app on the workspace it is already using. Apps that roam, like terminals, are skipped.
+- **Keep apps there** moves assigned apps back if they leave that workspace.
 - Press Escape to close the panel.
 
 Assigned apps open on their workspace through generated Hyprland window rules. With **Follow launches** on (the default), Hyprland also switches you to that workspace. `omarchy-launch-or-focus` is used when an assigned app is already running.

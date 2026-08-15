@@ -73,6 +73,20 @@ Panel {
     service.renameWorkspace(selected.id, name)
   }
 
+  function goToWorkspace(number) {
+    if (service) service.focusWorkspace(number)
+  }
+
+  function launchSelectedWorkspace(workspaceId) {
+    if (service) service.launchWorkspace(workspaceId)
+  }
+
+  function deleteWorkspace(workspaceId) {
+    if (!service) return
+    service.removeWorkspace(workspaceId)
+    if (selectedId === workspaceId) selectWorkspace(defaultSelectedId())
+  }
+
   function addNamedWorkspace() {
     if (!service) return
     var before = workspaces.map(function(ws) { return ws.id })
@@ -145,6 +159,16 @@ Panel {
             foreground: root.contentForeground
             fontFamily: root.contentFontFamily
             onClicked: if (service) service.setFollowOnLaunch(!(service.config.followOnLaunch !== false))
+          }
+
+          Toggle {
+            width: parent.width
+            label: "Keep apps there"
+            description: "Move assigned apps back if they leave their workspace"
+            checked: service ? service.config.pinWindows === true : false
+            foreground: root.contentForeground
+            fontFamily: root.contentFontFamily
+            onClicked: if (service) service.setPinWindows(!(service.config.pinWindows !== false))
           }
 
           PanelSeparator { width: parent.width; foreground: root.contentForeground }
@@ -364,6 +388,27 @@ Panel {
             onClicked: {
               if (service && selected) service.assignActiveWindow(selected.id)
             }
+          }
+
+          Button {
+            width: parent.width
+            text: "Assign open windows"
+            foreground: root.contentForeground
+            fontFamily: root.contentFontFamily
+            onClicked: {
+              if (!service) return
+              service.refreshWindows()
+              Qt.callLater(function() { service.importOpenWindows() })
+            }
+          }
+
+          Text {
+            width: parent.width
+            text: "Open-window import parks each unique app on the workspace it is on now. Apps already spread across workspaces, like terminals, are skipped."
+            color: root.dim
+            font.family: root.contentFontFamily
+            font.pixelSize: Style.font.caption
+            wrapMode: Text.WordWrap
           }
 
           Text {

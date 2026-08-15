@@ -85,6 +85,20 @@ test("generateLua escapes regex metacharacters", () => {
   assert.match(lua, /org\\\\\.foo\\\\\+bar/)
 })
 
+test("persisted app ids are not treated as desktop files", () => {
+  const parsed = Model.parseConfig({
+    workspaces: [{
+      id: "comms",
+      name: "Comms",
+      workspace: 2,
+      apps: [{ id: "org-telegram-desktop", name: "Telegram", class: "org.telegram.desktop" }]
+    }]
+  })
+  const app = parsed.config.workspaces[0].apps[0]
+  assert.strictEqual(app.desktopId, "")
+  assert.strictEqual(app.class, "org.telegram.desktop")
+})
+
 test("title-only windows still generate a rule", () => {
   const app = Model.appFromWindow({ class: "", title: "Secret Chat" })
   assert.strictEqual(app.title, "Secret Chat")
@@ -131,6 +145,47 @@ test("launch and focus commands stay quoted", () => {
   const launch = Model.launchCommand({ class: "Slack", desktopId: "slack", name: "Slack" })
   assert.match(launch, /omarchy-launch-or-focus/)
   assert.match(launch, /gtk-launch/)
+})
+
+test("empty activewindow JSON is ignored", () => {
+  assert.strictEqual(Model.parseActiveWindow("{}"), null)
+})
+
+test("focusedClient prefers the lowest focusHistoryID", () => {
+  const clients = Model.parseClients(JSON.stringify([
+    { class: "A", title: "a", address: "0x1", workspace: { id: 1 }, focusHistoryID: 2 },
+    { class: "B", title: "b", address: "0x2", workspace: { id: 2 }, focusHistoryID: 0 }
+  ]))
+  assert.strictEqual(Model.focusedClient(clients).class, "B")
+})
+
+test("importOpenWindows assigns unique classes and skips roamers", () => {
+  const clients = [
+    { class: "org.telegram.desktop", title: "Telegram", workspace: 2, address: "0x1" },
+    { class: "Beeper", title: "Beeper", workspace: 2, address: "0x2" },
+    { class: "kitty", title: "one", workspace: 4, address: "0x3" },
+    { class: "kitty", title: "two", workspace: 8, address: "0x4" },
+    { class: "chatgpt", title: "ChatGPT", workspace: 10, address: "0x5" }
+  ]
+  const cfg = Model.importOpenWindows(Model.defaultConfig(), clients)
+  assert.ok(Model.findAssignedWorkspaceForClass(cfg, "org.telegram.desktop"))
+  assert.strictEqual(Model.findAssignedWorkspaceForClass(cfg, "org.telegram.desktop").workspace, 2)
+  assert.strictEqual(Model.findAssignedWorkspaceForClass(cfg, "Beeper").workspace, 2)
+  assert.strictEqual(Model.findAssignedWorkspaceForClass(cfg, "chatgpt").workspace, 10)
+  assert.strictEqual(Model.findAssignedWorkspaceForClass(cfg, "kitty"), null)
+  assert.ok(Model.findWorkspaceByNumber(cfg, 10))
+})
+
+test("moveCommand targets an address without following when asked", () => {
+  const command = Model.moveCommand("0xabc", 2, false)
+  assert.match(command, /window = "address:0xabc"/)
+  assert.match(command, /follow = false/)
+})
+
+test("windowFromOpenEvent parses class and title", () => {
+  const window = Model.windowFromOpenEvent({ data: "0x1,2,org.telegram.desktop,Telegram (12)" })
+  assert.strictEqual(window.class, "org.telegram.desktop")
+  assert.strictEqual(window.workspace, 2)
 })
 
 test("desktopOptions skip hidden entries and duplicates", () => {

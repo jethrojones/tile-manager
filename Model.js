@@ -10,6 +10,7 @@ function defaultConfig() {
   return {
     version: CONFIG_VERSION,
     followOnLaunch: true,
+    pinWindows: false,
     workspaces: [
       emptyWorkspace("ws-1", "1", 1),
       emptyWorkspace("ws-2", "2", 2),
@@ -84,6 +85,7 @@ function normalizeConfig(raw) {
     config: {
       version: CONFIG_VERSION,
       followOnLaunch: source.followOnLaunch !== false,
+      pinWindows: source.pinWindows === true,
       workspaces: workspaces
     }
   }
@@ -112,7 +114,7 @@ function normalizeWorkspace(raw, used) {
 function normalizeApp(raw, used) {
   if (!raw || typeof raw !== "object") return null
   var name = String(raw.name || raw.label || raw.desktopId || raw.class || "").trim()
-  var desktopId = normalizeDesktopId(raw.desktopId || raw.id || "")
+  var desktopId = normalizeDesktopId(raw.desktopId || "")
   var klass = String(raw.class || raw.startupClass || "").trim()
   var title = String(raw.title || "").trim()
   if (!name && !desktopId && !klass) return null
@@ -239,6 +241,31 @@ function setFollowOnLaunch(config, enabled) {
   return next
 }
 
+function setPinWindows(config, enabled) {
+  var next = clone(config)
+  next.pinWindows = enabled !== false
+  return next
+}
+
+function findWorkspaceByNumber(config, number) {
+  var target = clampWorkspace(number)
+  var workspaces = config && config.workspaces ? config.workspaces : []
+  for (var i = 0; i < workspaces.length; i++) {
+    if (workspaces[i].workspace === target) return workspaces[i]
+  }
+  return null
+}
+
+function ensureWorkspaceNumber(config, number) {
+  var next = clone(config)
+  var target = clampWorkspace(number)
+  if (findWorkspaceByNumber(next, target)) return next
+  var used = idsInUse(next.workspaces)
+  next.workspaces.push(emptyWorkspace(uniqueId("ws-" + target, used), String(target), target))
+  next.workspaces.sort(function(a, b) { return a.workspace - b.workspace })
+  return next
+}
+
 function escapeRe2(value) {
   return String(value || "").replace(/[\\^$.|?*+()\[\]{}]/g, "\\$&")
 }
@@ -305,13 +332,25 @@ function parseJsonProcess(raw) {
 
 function parseActiveWindow(raw) {
   var data = parseJsonProcess(raw)
-  if (!data || typeof data !== "object") return null
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null
+  if (!data.class && !data.title && !data.address) return null
   return {
     class: String(data.class || ""),
+    initialClass: String(data.initialClass || ""),
     title: String(data.title || ""),
     address: String(data.address || ""),
-    workspace: data.workspace && data.workspace.id ? data.workspace.id : 0
+    workspace: data.workspace && data.workspace.id ? data.workspace.id : 0,
+    focusHistoryID: 0
   }
+}
+
+function focusedClient(clients) {
+  var best = null
+  var list = clients || []
+  for (var i = 0; i < list.length; i++) {
+    if (!best || list[i].focusHistoryID < best.focusHistoryID) best = list[i]
+  }
+  return best
 }
 
 function parseClients(raw) {
@@ -321,11 +360,14 @@ function parseClients(raw) {
   for (var i = 0; i < data.length; i++) {
     var item = data[i]
     if (!item) continue
+    var focusId = parseInt(String(item.focusHistoryID), 10)
     clients.push({
       class: String(item.class || ""),
+      initialClass: String(item.initialClass || ""),
       title: String(item.title || ""),
       address: String(item.address || ""),
-      workspace: item.workspace && item.workspace.id ? item.workspace.id : 0
+      workspace: item.workspace && item.workspace.id ? item.workspace.id : 0,
+      focusHistoryID: isFinite(focusId) ? focusId : 9999
     })
   }
   return clients
@@ -339,13 +381,21 @@ function workspaceOccupied(clients, workspaceNumber) {
 }
 
 function findAssignedWorkspaceForClass(config, klass) {
-  var needle = String(klass || "").toLowerCase()
-  if (!needle) return null
+  return findAssignedWorkspaceForWindow(config, { class: klass })
+}
+
+function findAssignedWorkspaceForWindow(config, window) {
+  if (!window) return null
+  var classNeedle = String(window.class || window.initialClass || "").toLowerCase()
+  var titleNeedle = String(window.title || "").toLowerCase()
   var workspaces = config && config.workspaces ? config.workspaces : []
   for (var i = 0; i < workspaces.length; i++) {
     var apps = workspaces[i].apps || []
     for (var j = 0; j < apps.length; j++) {
-      if (String(apps[j].class || "").toLowerCase() === needle) return workspaces[i]
+      var appClass = String(apps[j].class || "").toLowerCase()
+      var appTitle = String(apps[j].title || "").toLowerCase()
+      if (classNeedle && appClass && appClass === classNeedle) return workspaces[i]
+      if (titleNeedle && appTitle && appTitle === titleNeedle) return workspaces[i]
     }
   }
   return null
@@ -365,22 +415,98 @@ function appFromDesktopEntry(entry) {
   }
 }
 
+function friendlyAppName(klass, title) {
+  var lower = String(klass || "").toLowerCase()
+  if (lower.indexOf("discord") !== -1) return "Discord"
+  if (lower.indexOf("telegram") !== -1) return "Telegram"
+  if (lower.indexOf("beeper") !== -1) return "Beeper"
+  if (lower.indexOf("hey.com") !== -1) return "Hey"
+  if (lower.indexOf("chatgpt") !== -1) return "ChatGPT"
+  if (lower.indexOf("btop") !== -1) return "btop"
+  if (lower === "chromium" || lower.indexOf("google-chrome") !== -1) return "Chromium"
+  var label = String(title || "").trim()
+  if (label && label.length <= 28 && label.indexOf(" | ") === -1) return label
+  return klass || label
+}
+
 function appFromWindow(window) {
   if (!window) return null
-  var klass = String(window.class || "").trim()
+  var klass = String(window.class || window.initialClass || "").trim()
   var title = String(window.title || "").trim()
   if (!klass && !title) return null
+  var name = friendlyAppName(klass, title)
   return {
-    name: title || klass,
+    name: name,
     desktopId: "",
     class: klass,
     title: klass ? "" : title
   }
 }
 
+function importOpenWindows(config, clients) {
+  var next = clone(config)
+  var classWorkspaces = {}
+  var classSample = {}
+  var list = clients || []
+  for (var i = 0; i < list.length; i++) {
+    var client = list[i]
+    var klass = String(client.class || client.initialClass || "").trim()
+    if (!klass || !client.workspace) continue
+    if (!classWorkspaces[klass]) classWorkspaces[klass] = {}
+    classWorkspaces[klass][client.workspace] = true
+    classSample[klass] = client
+  }
+  var names = Object.keys(classWorkspaces)
+  for (var n = 0; n < names.length; n++) {
+    var className = names[n]
+    var numbers = Object.keys(classWorkspaces[className])
+    if (numbers.length !== 1) continue
+    var number = parseInt(numbers[0], 10)
+    next = ensureWorkspaceNumber(next, number)
+    var ws = findWorkspaceByNumber(next, number)
+    if (!ws) continue
+    next = addApp(next, ws.id, appFromWindow(classSample[className]))
+  }
+  return next
+}
+
 function focusCommand(workspaceNumber) {
   var id = clampWorkspace(workspaceNumber)
   return "hyprctl dispatch " + shellQuote('hl.dsp.focus({ workspace = "' + id + '" })')
+}
+
+function windowAddress(address) {
+  var value = String(address || "").trim()
+  if (!value) return ""
+  if (value.indexOf("address:") === 0) return value
+  if (value.indexOf("0x") === 0) return "address:" + value
+  return "address:" + value
+}
+
+function moveCommand(address, workspace, follow) {
+  var target = windowAddress(address)
+  if (!target) return ""
+  var spec = follow === false
+    ? 'hl.dsp.window.move({ workspace = "' + clampWorkspace(workspace) + '", follow = false, window = "' + target + '" })'
+    : 'hl.dsp.window.move({ workspace = "' + clampWorkspace(workspace) + '", window = "' + target + '" })'
+  return "hyprctl dispatch " + shellQuote(spec)
+}
+
+function eventParts(event, count) {
+  if (event && typeof event.parse === "function") {
+    try { return event.parse(count) } catch (e) {}
+  }
+  return String(event && event.data ? event.data : "").split(",")
+}
+
+function windowFromOpenEvent(event) {
+  var parts = eventParts(event, 4)
+  return {
+    address: String(parts[0] || ""),
+    workspace: parseInt(String(parts[1] || ""), 10) || 0,
+    class: String(parts[2] || ""),
+    title: String(parts.slice(3).join(",") || "")
+  }
 }
 
 function launchCommand(app) {
@@ -435,17 +561,25 @@ if (typeof module !== "undefined" && module.exports) {
     addApp: addApp,
     removeApp: removeApp,
     setFollowOnLaunch: setFollowOnLaunch,
+    setPinWindows: setPinWindows,
     findWorkspace: findWorkspace,
+    findWorkspaceByNumber: findWorkspaceByNumber,
+    ensureWorkspaceNumber: ensureWorkspaceNumber,
     escapeRe2: escapeRe2,
     escapeLuaString: escapeLuaString,
     generateLua: generateLua,
     parseActiveWindow: parseActiveWindow,
     parseClients: parseClients,
+    focusedClient: focusedClient,
     workspaceOccupied: workspaceOccupied,
     findAssignedWorkspaceForClass: findAssignedWorkspaceForClass,
+    findAssignedWorkspaceForWindow: findAssignedWorkspaceForWindow,
     appFromDesktopEntry: appFromDesktopEntry,
     appFromWindow: appFromWindow,
+    importOpenWindows: importOpenWindows,
     focusCommand: focusCommand,
+    moveCommand: moveCommand,
+    windowFromOpenEvent: windowFromOpenEvent,
     launchCommand: launchCommand,
     desktopOptions: desktopOptions,
     stringifyConfig: stringifyConfig,
