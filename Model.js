@@ -372,7 +372,20 @@ function escapeRe2(value) {
 }
 
 function escapeLuaString(value) {
-  return String(value || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")
+  var text = String(value || "")
+  var out = ""
+  for (var i = 0; i < text.length; i++) {
+    var ch = text.charAt(i)
+    var code = text.charCodeAt(i)
+    if (ch === "\\") out += "\\\\"
+    else if (ch === "\"") out += "\\\""
+    else if (ch === "\n") out += "\\n"
+    else if (ch === "\r") out += "\\r"
+    else if (ch === "\t") out += "\\t"
+    else if (code < 32) out += "\\" + ("00" + code).slice(-3)
+    else out += ch
+  }
+  return out
 }
 
 function exactClassPattern(klass) {

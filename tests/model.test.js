@@ -126,6 +126,31 @@ test("generateLua escapes regex metacharacters", () => {
   assert.match(lua, /org\\\\\.foo\\\\\+bar/)
 })
 
+test("escapeLuaString keeps quotes, newlines, and carriage returns inside the string", () => {
+  assert.strictEqual(Model.escapeLuaString('say "hi"'), 'say \\"hi\\"')
+  assert.strictEqual(Model.escapeLuaString("a\\b"), "a\\\\b")
+  assert.strictEqual(Model.escapeLuaString("line\nbreak"), "line\\nbreak")
+  assert.strictEqual(Model.escapeLuaString("win\rbreak"), "win\\rbreak")
+  assert.strictEqual(Model.escapeLuaString("crlf\r\n"), "crlf\\r\\n")
+  assert.strictEqual(Model.escapeLuaString("nul\u0000tab\tend"), "nul\\000tab\\tend")
+})
+
+test("generateLua does not let carriage returns break out of the Lua line", () => {
+  let cfg = Model.defaultConfig()
+  cfg = Model.addApp(cfg, cfg.workspaces[0].id, {
+    name: "Evil\r o.window({}, { workspace = \"9\" })",
+    class: "Bad\rClass",
+    title: "Title\rMore",
+    desktopId: "evil"
+  })
+  const lua = Model.generateLua(cfg)
+  assert.doesNotMatch(lua, /\r/)
+  assert.match(lua, /class = "\^Bad\\rClass\$"/)
+  assert.match(lua, /title = "\^Title\\rMore\$"/)
+  assert.match(lua, /-- Evil\\r o\.window/)
+  assert.equal(lua.split("\n").filter((line) => line.startsWith("o.window(")).length, 1)
+})
+
 test("persisted app ids are not treated as desktop files", () => {
   const parsed = Model.parseConfig({
     workspaces: [{
